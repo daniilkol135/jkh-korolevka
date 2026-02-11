@@ -41,7 +41,7 @@
                             {% for r in responses %}
                             <tr>
                                 <td>{{ r.id }}</td>
-                                <td>{{ r.timestamp.strftime('%d.%m.%Y %H:%M') }}</td>
+                                <td>{{ r.timestamp.strftime('%d.%m.%Y %H:%M') if r.timestamp else '—' }}</td>
                                 <td>
                                     <span class="badge {% if r.heating >= 4 %}bg-success{% elif r.heating == 3 %}bg-warning{% else %}bg-danger{% endif %}">
                                         {{ r.heating }}
