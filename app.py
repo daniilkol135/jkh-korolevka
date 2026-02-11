@@ -19,13 +19,26 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
+# ============ СПИСОК АДРЕСОВ ============
+ADDRESSES = [
+    "Смоленск, ул. Авиаторов, д. 9",
+    "Смоленск, ул. Ударников, д. 36",
+    "Смоленск, ул. Авиаторов, д. 5Б",
+    "Смоленск, мкр. Королевка, д. 13a",
+    "Смоленск, ул. Авиаторов, д. 4",
+    "Смоленск, мкр. Королевка, д. 20",
+    "Смоленск, ул. Маршала Еременко, д. 32"
+]
+
 # ============ МОДЕЛЬ ДАННЫХ ============
-# ВАШИ 6 ВОПРОСОВ ПО ЖКХ
 class Response(db.Model):
     __tablename__ = 'response'
     id = db.Column(db.Integer, primary_key=True)
     
-    # Ваши вопросы:
+    # Адрес
+    address = db.Column(db.String(200))  # Выбор адреса из списка
+    
+    # Вопросы по ЖКХ
     cleaning_inside = db.Column(db.Integer)  # Уборка внутри подъезда
     lighting_inside = db.Column(db.Integer)  # Освещение внутри подъезда
     elevator = db.Column(db.Integer)         # Работа лифта
@@ -55,13 +68,14 @@ def admin_required(f):
 # ============ СТРАНИЦА ОПРОСА ============
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', addresses=ADDRESSES)
 
 # ============ ОТПРАВКА ОТВЕТОВ ============
 @app.route('/submit', methods=['POST'])
 def submit():
     try:
         response = Response(
+            address=request.form['address'],
             cleaning_inside=request.form['cleaning_inside'],
             lighting_inside=request.form['lighting_inside'],
             elevator=request.form['elevator'],
@@ -77,6 +91,7 @@ def submit():
         print(f"Error saving response: {e}")
         db.create_all()
         response = Response(
+            address=request.form['address'],
             cleaning_inside=request.form['cleaning_inside'],
             lighting_inside=request.form['lighting_inside'],
             elevator=request.form['elevator'],
@@ -117,7 +132,10 @@ def results():
             'lighting_outside': 0,
             'garbage': 0
         }
-        return render_template('results.html', stats=stats, averages=averages)
+        # Статистика по адресам
+        address_stats = {addr: 0 for addr in ADDRESSES}
+        return render_template('results.html', stats=stats, averages=averages, 
+                             addresses=ADDRESSES, address_stats=address_stats)
     
     responses = Response.query.all()
     
@@ -131,6 +149,9 @@ def results():
         'total': len(responses)
     }
     
+    # Статистика по адресам
+    address_stats = {addr: 0 for addr in ADDRESSES}
+    
     for r in responses:
         stats['cleaning_inside'][r.cleaning_inside-1] += 1
         stats['lighting_inside'][r.lighting_inside-1] += 1
@@ -138,6 +159,10 @@ def results():
         stats['snow_removal'][r.snow_removal-1] += 1
         stats['lighting_outside'][r.lighting_outside-1] += 1
         stats['garbage'][r.garbage-1] += 1
+        
+        # Считаем голоса по адресам
+        if r.address in address_stats:
+            address_stats[r.address] += 1
     
     averages = {}
     categories = ['cleaning_inside', 'lighting_inside', 'elevator', 
@@ -150,7 +175,8 @@ def results():
         else:
             averages[key] = 0
     
-    return render_template('results.html', stats=stats, averages=averages)
+    return render_template('results.html', stats=stats, averages=averages,
+                         addresses=ADDRESSES, address_stats=address_stats)
 
 # ============ ВХОД В АДМИНКУ ============
 @app.route('/login', methods=['GET', 'POST'])
@@ -169,10 +195,10 @@ def admin():
     inspector = db.inspect(db.engine)
     if not inspector.has_table('response'):
         db.create_all()
-        return render_template('admin.html', responses=[])
+        return render_template('admin.html', responses=[], addresses=ADDRESSES)
     
     responses = Response.query.order_by(Response.timestamp.desc()).all()
-    return render_template('admin.html', responses=responses)
+    return render_template('admin.html', responses=responses, addresses=ADDRESSES)
 
 # ============ ВЫХОД ИЗ АДМИНКИ ============
 @app.route('/logout')
