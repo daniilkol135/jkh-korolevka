@@ -20,12 +20,12 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # ============ МОДЕЛЬ ДАННЫХ ============
-# 6 новых вопросов по ЖКХ
+# ВАШИ 6 ВОПРОСОВ ПО ЖКХ
 class Response(db.Model):
     __tablename__ = 'response'
     id = db.Column(db.Integer, primary_key=True)
     
-    # Новые вопросы
+    # Ваши вопросы:
     cleaning_inside = db.Column(db.Integer)  # Уборка внутри подъезда
     lighting_inside = db.Column(db.Integer)  # Освещение внутри подъезда
     elevator = db.Column(db.Integer)         # Работа лифта
