@@ -18,6 +18,9 @@
             --stat-card-shadow: 0 5px 15px rgba(0,0,0,0.08);
             --btn-primary: #0d6efd;
             --btn-primary-hover: #0b5ed7;
+            --btn-success: #198754;
+            --chart-grid: #dee2e6;
+            --chart-text: #212529;
         }
 
         /* ======== ТЁМНАЯ ТЕМА ======== */
@@ -31,44 +34,69 @@
             --stat-card-shadow: 0 5px 15px rgba(0,0,0,0.3);
             --btn-primary: #6c5ce7;
             --btn-primary-hover: #5a4ad1;
+            --btn-success: #20c997;
+            --chart-grid: #4a4f62;
+            --chart-text: #e9ecef;
         }
 
         body { 
             background: var(--bg-color); 
             color: var(--text-color);
             transition: all 0.3s ease;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
         .stat-card { 
-            transition: transform 0.2s; 
+            transition: transform 0.2s, box-shadow 0.2s; 
             border: none; 
             border-radius: 15px; 
             box-shadow: var(--stat-card-shadow); 
             height: 100%;
             background: var(--stat-card-bg);
             color: var(--text-color);
+            border: 1px solid var(--border-color);
         }
         .stat-card:hover { 
             transform: translateY(-5px); 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
         }
         .score { 
             font-size: 2.2rem; 
             font-weight: 700; 
             color: var(--btn-primary); 
+            line-height: 1.2;
         }
         .category-name { 
-            font-size: 0.9rem; 
+            font-size: 0.85rem; 
             color: var(--text-muted); 
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
         }
         .card {
             background: var(--card-bg);
             color: var(--text-color);
             border: 1px solid var(--border-color);
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        .card-header {
+            background: var(--card-bg);
+            color: var(--text-color);
+            border-bottom: 1px solid var(--border-color);
+            border-radius: 15px 15px 0 0 !important;
+            padding: 1rem 1.5rem;
         }
         h1, h2, h3, h4, h5, h6 {
             color: var(--text-color);
         }
         .text-muted {
             color: var(--text-muted) !important;
+        }
+        .btn {
+            border-radius: 10px;
+            padding: 0.6rem 1.5rem;
+            font-weight: 500;
+            transition: all 0.2s;
         }
         .btn-primary {
             background: var(--btn-primary);
@@ -77,6 +105,16 @@
         .btn-primary:hover {
             background: var(--btn-primary-hover);
             border-color: var(--btn-primary-hover);
+            transform: translateY(-2px);
+        }
+        .btn-success {
+            background: var(--btn-success);
+            border-color: var(--btn-success);
+        }
+        .btn-success:hover {
+            background: var(--btn-success);
+            opacity: 0.9;
+            transform: translateY(-2px);
         }
 
         /* ======== ПЕРЕКЛЮЧАТЕЛЬ ТЕМ ======== */
@@ -135,8 +173,42 @@
         }
         .no-data {
             text-align: center;
-            padding: 50px;
+            padding: 60px 20px;
             color: var(--text-muted);
+        }
+        .badge {
+            padding: 0.5rem 0.8rem;
+            font-weight: 500;
+        }
+        .table {
+            color: var(--text-color);
+        }
+        .table thead th {
+            border-color: var(--border-color);
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .table td {
+            border-color: var(--border-color);
+            vertical-align: middle;
+        }
+        .address-stat {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .progress {
+            height: 8px;
+            background: var(--border-color);
+            border-radius: 10px;
+            flex-grow: 1;
+        }
+        .progress-bar {
+            background: var(--btn-primary);
+            border-radius: 10px;
         }
     </style>
 </head>
@@ -151,117 +223,121 @@
             </label>
         </div>
 
-        <h1 class="text-center mb-2">📊 Результаты опроса</h1>
-        <h2 class="text-center h4 mb-4">мкр Королевка</h2>
-        
         <div class="text-center mb-5">
-            <span class="badge bg-primary p-3 fs-6">Всего проголосовало: {{ stats.total }} человек</span>
+            <h1 class="display-5 fw-bold mb-2">📊 Результаты опроса</h1>
+            <h2 class="h4 text-muted mb-4">мкр Королевка, г. Смоленск</h2>
+            <div class="d-inline-block">
+                <span class="badge bg-primary p-3 fs-6 rounded-pill">
+                    🗳️ Всего проголосовало: {{ stats.total }} человек
+                </span>
+            </div>
         </div>
         
         {% if stats.total == 0 %}
         <div class="no-data">
-            <h3>😢 Пока нет данных</h3>
-            <p class="lead">Будьте первым, кто пройдет опрос!</p>
-            <a href="/" class="btn btn-primary btn-lg mt-3">Пройти опрос</a>
+            <div class="display-1 mb-3">😢</div>
+            <h3 class="mb-3">Пока нет данных</h3>
+            <p class="lead mb-4">Будьте первым, кто пройдет опрос!</p>
+            <a href="/" class="btn btn-primary btn-lg px-5">Пройти опрос</a>
         </div>
         {% else %}
         
-        <!-- Карточки со средними оценками (6 штук) -->
+        <!-- Карточки со средними оценками -->
         <div class="row g-4 mb-5">
             <div class="col-md-4 col-lg-2">
-                <div class="card stat-card p-2 text-center">
-                    <div class="card-body">
-                        <div class="category-name">Уборка в подъезде</div>
+                <div class="card stat-card p-3 text-center">
+                    <div class="card-body p-2">
+                        <div class="category-name mb-2">🧹 Уборка в подъезде</div>
                         <div class="score">{{ averages.cleaning_inside }}</div>
-                        <p class="text-muted mb-0">из 5</p>
+                        <div class="text-muted small mt-2">из 5</div>
                     </div>
                 </div>
             </div>
             <div class="col-md-4 col-lg-2">
-                <div class="card stat-card p-2 text-center">
-                    <div class="card-body">
-                        <div class="category-name">Освещение в подъезде</div>
+                <div class="card stat-card p-3 text-center">
+                    <div class="card-body p-2">
+                        <div class="category-name mb-2">💡 Освещение в подъезде</div>
                         <div class="score">{{ averages.lighting_inside }}</div>
-                        <p class="text-muted mb-0">из 5</p>
+                        <div class="text-muted small mt-2">из 5</div>
                     </div>
                 </div>
             </div>
             <div class="col-md-4 col-lg-2">
-                <div class="card stat-card p-2 text-center">
-                    <div class="card-body">
-                        <div class="category-name">Работа лифта</div>
+                <div class="card stat-card p-3 text-center">
+                    <div class="card-body p-2">
+                        <div class="category-name mb-2">🛗 Работа лифта</div>
                         <div class="score">{{ averages.elevator }}</div>
-                        <p class="text-muted mb-0">из 5</p>
+                        <div class="text-muted small mt-2">из 5</div>
                     </div>
                 </div>
             </div>
             <div class="col-md-4 col-lg-2">
-                <div class="card stat-card p-2 text-center">
-                    <div class="card-body">
-                        <div class="category-name">Уборка снега</div>
+                <div class="card stat-card p-3 text-center">
+                    <div class="card-body p-2">
+                        <div class="category-name mb-2">❄️ Уборка снега</div>
                         <div class="score">{{ averages.snow_removal }}</div>
-                        <p class="text-muted mb-0">из 5</p>
+                        <div class="text-muted small mt-2">из 5</div>
                     </div>
                 </div>
             </div>
             <div class="col-md-4 col-lg-2">
-                <div class="card stat-card p-2 text-center">
-                    <div class="card-body">
-                        <div class="category-name">Уличное освещение</div>
+                <div class="card stat-card p-3 text-center">
+                    <div class="card-body p-2">
+                        <div class="category-name mb-2">🌙 Уличное освещение</div>
                         <div class="score">{{ averages.lighting_outside }}</div>
-                        <p class="text-muted mb-0">из 5</p>
+                        <div class="text-muted small mt-2">из 5</div>
                     </div>
                 </div>
             </div>
             <div class="col-md-4 col-lg-2">
-                <div class="card stat-card p-2 text-center">
-                    <div class="card-body">
-                        <div class="category-name">Вывоз мусора</div>
+                <div class="card stat-card p-3 text-center">
+                    <div class="card-body p-2">
+                        <div class="category-name mb-2">🗑️ Вывоз мусора</div>
                         <div class="score">{{ averages.garbage }}</div>
-                        <p class="text-muted mb-0">из 5</p>
+                        <div class="text-muted small mt-2">из 5</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Графики (6 штук) -->
-        <div class="row">
-            <div class="col-md-6 col-lg-4 mb-4">
+        <!-- Графики -->
+        <div class="row g-4 mb-5">
+            <div class="col-md-6 col-lg-4">
                 <div class="card h-100">
                     <div class="card-body">
                         <canvas id="cleaningChart"></canvas>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-4 mb-4">
+            <div class="col-md-6 col-lg-4">
                 <div class="card h-100">
                     <div class="card-body">
                         <canvas id="lightingInChart"></canvas>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-4 mb-4">
+            <div class="col-md-6 col-lg-4">
                 <div class="card h-100">
                     <div class="card-body">
                         <canvas id="elevatorChart"></canvas>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-4 mb-4">
+            <div class="col-md-6 col-lg-4">
                 <div class="card h-100">
                     <div class="card-body">
                         <canvas id="snowChart"></canvas>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-4 mb-4">
+            <div class="col-md-6 col-lg-4">
                 <div class="card h-100">
                     <div class="card-body">
                         <canvas id="lightingOutChart"></canvas>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-4 mb-4">
+            <div class="col-md-6 col-lg-4">
                 <div class="card h-100">
                     <div class="card-body">
                         <canvas id="garbageChart"></canvas>
@@ -269,10 +345,122 @@
                 </div>
             </div>
         </div>
+
+        <!-- СТАТИСТИКА ПО АДРЕСАМ -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0 fw-bold">📍 Статистика по адресам</h4>
+                        <span class="badge bg-primary">{{ addresses|length }} домов</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Адрес</th>
+                                        <th>Голосов</th>
+                                        <th>Доля</th>
+                                        <th>Прогресс</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for address in addresses %}
+                                    <tr>
+                                        <td class="fw-bold">{{ address }}</td>
+                                        <td>
+                                            <span class="badge bg-primary rounded-pill">
+                                                {{ address_stats[address] }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if stats.total > 0 %}
+                                                <span class="text-muted">
+                                                    {{ "%.1f"|format(address_stats[address] / stats.total * 100) }}%
+                                                </span>
+                                            {% else %}
+                                                0%
+                                            {% endif %}
+                                        </td>
+                                        <td style="width: 40%;">
+                                            {% if stats.total > 0 %}
+                                            <div class="progress">
+                                                <div class="progress-bar" 
+                                                     style="width: {{ address_stats[address] / stats.total * 100 }}%; 
+                                                            background: linear-gradient(90deg, var(--btn-primary), var(--btn-primary-hover));"
+                                                     role="progressbar">
+                                                </div>
+                                            </div>
+                                            {% else %}
+                                            <div class="progress">
+                                                <div class="progress-bar" style="width: 0%;"></div>
+                                            </div>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Сводка по адресам -->
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <div class="card bg-transparent border-0">
+                                    <div class="card-body">
+                                        <h6 class="fw-bold mb-3">🏆 Самый активный дом</h6>
+                                        {% set max_votes = 0 %}
+                                        {% set best_address = '' %}
+                                        {% for address in addresses %}
+                                            {% if address_stats[address] > max_votes %}
+                                                {% set max_votes = address_stats[address] %}
+                                                {% set best_address = address %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% if max_votes > 0 %}
+                                        <p class="mb-1 fs-5 fw-bold text-primary">{{ best_address }}</p>
+                                        <p class="text-muted">{{ max_votes }} голосов</p>
+                                        {% else %}
+                                        <p class="text-muted">Пока нет голосов</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card bg-transparent border-0">
+                                    <div class="card-body">
+                                        <h6 class="fw-bold mb-3">📊 Охват домов</h6>
+                                        {% set active_houses = 0 %}
+                                        {% for address in addresses %}
+                                            {% if address_stats[address] > 0 %}
+                                                {% set active_houses = active_houses + 1 %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        <p class="mb-1 fs-5 fw-bold text-success">
+                                            {{ active_houses }} из {{ addresses|length }}
+                                        </p>
+                                        <p class="text-muted">
+                                            {{ "%.1f"|format(active_houses / addresses|length * 100) }}% домов
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         {% endif %}
 
-        <div class="text-center mt-4">
-            <a href="/" class="btn btn-primary btn-lg px-5">← Вернуться к опросу</a>
+        <!-- Кнопки навигации -->
+        <div class="text-center mt-5">
+            <a href="/" class="btn btn-primary btn-lg px-5 me-2">
+                ← Вернуться к опросу
+            </a>
+            <a href="/admin" class="btn btn-success btn-lg px-5">
+                🔐 Админ-панель
+            </a>
         </div>
     </div>
 
@@ -287,7 +475,12 @@
             {id: 'garbageChart', label: 'Вывоз мусора', data: {{ stats.garbage }}}
         ];
 
-        // Создаем графики только если есть данные
+        // Определяем текущую тему
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        const textColor = currentTheme === 'dark' ? '#e9ecef' : '#212529';
+        const gridColor = currentTheme === 'dark' ? '#4a4f62' : '#dee2e6';
+
+        // Создаем графики
         charts.forEach(chart => {
             const canvas = document.getElementById(chart.id);
             if (canvas) {
@@ -300,7 +493,8 @@
                             label: 'Количество оценок',
                             data: chart.data,
                             backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#198754', '#0d6efd'],
-                            borderRadius: 5
+                            borderRadius: 5,
+                            borderWidth: 0
                         }]
                     },
                     options: {
@@ -312,18 +506,18 @@
                                 ticks: { 
                                     stepSize: 1, 
                                     precision: 0,
-                                    color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#e9ecef' : '#212529'
+                                    color: textColor
                                 },
                                 grid: {
-                                    color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#4a4f62' : '#dee2e6'
+                                    color: gridColor
                                 }
                             },
                             x: {
                                 ticks: {
-                                    color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#e9ecef' : '#212529'
+                                    color: textColor
                                 },
                                 grid: {
-                                    color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#4a4f62' : '#dee2e6'
+                                    color: gridColor
                                 }
                             }
                         },
@@ -332,7 +526,8 @@
                                 display: true,
                                 text: chart.label,
                                 font: { size: 14, weight: 'bold' },
-                                color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#e9ecef' : '#212529'
+                                color: textColor,
+                                padding: { bottom: 20 }
                             },
                             legend: { display: false }
                         }
@@ -341,15 +536,12 @@
             }
         });
 
-        // ======== ПЕРЕКЛЮЧАТЕЛЬ ТЕМ ========
+        // Переключатель тем
         const toggleSwitch = document.querySelector('#theme-toggle');
-        const currentTheme = localStorage.getItem('theme');
-
-        if (currentTheme) {
-            document.documentElement.setAttribute('data-theme', currentTheme);
-            if (currentTheme === 'dark') {
-                toggleSwitch.checked = true;
-            }
+        
+        if (currentTheme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            if (toggleSwitch) toggleSwitch.checked = true;
         }
 
         function switchTheme(e) {
@@ -360,7 +552,7 @@
                 document.documentElement.setAttribute('data-theme', 'light');
                 localStorage.setItem('theme', 'light');
             }
-            // Перезагружаем страницу чтобы обновить цвета графиков
+            // Перезагружаем страницу для обновления цветов графиков
             location.reload();
         }
 
