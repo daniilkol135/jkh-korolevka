@@ -6,13 +6,22 @@ import os
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-this-key-in-production')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///poll.db'
+
+# ✅ ФИКС: правильный путь для SQLite на Render
+basedir = os.path.abspath(os.path.dirname(__file__))
+db_path = os.path.join(basedir, 'instance', 'poll.db')
+
+# Создаем папку instance, если её нет
+os.makedirs(os.path.join(basedir, 'instance'), exist_ok=True)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + db_path
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Модель данных
+# Модель данных - название таблицы будет 'response'
 class Response(db.Model):
+    __tablename__ = 'response'  # явно указываем имя таблицы
     id = db.Column(db.Integer, primary_key=True)
     heating = db.Column(db.Integer)
     water = db.Column(db.Integer)
@@ -20,6 +29,13 @@ class Response(db.Model):
     maintenance = db.Column(db.Integer)
     comment = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.now)
+
+# ✅ ФИКС: создаем таблицы при первом запросе
+@app.before_request
+def create_tables():
+    if not hasattr(app, 'tables_created'):
+        db.create_all()
+        app.tables_created = True
 
 # Декоратор для админки
 def admin_required(f):
@@ -36,16 +52,32 @@ def index():
 
 @app.route('/submit', methods=['POST'])
 def submit():
-    response = Response(
-        heating=request.form['heating'],
-        water=request.form['water'],
-        cleaning=request.form['cleaning'],
-        maintenance=request.form['maintenance'],
-        comment=request.form.get('comment', '')
-    )
-    db.session.add(response)
-    db.session.commit()
-    return redirect(url_for('thankyou'))
+    try:
+        response = Response(
+            heating=request.form['heating'],
+            water=request.form['water'],
+            cleaning=request.form['cleaning'],
+            maintenance=request.form['maintenance'],
+            comment=request.form.get('comment', '')
+        )
+        db.session.add(response)
+        db.session.commit()
+        return redirect(url_for('thankyou'))
+    except Exception as e:
+        print(f"Error saving response: {e}")
+        # Если таблицы нет, создаем её
+        db.create_all()
+        # Пробуем снова
+        response = Response(
+            heating=request.form['heating'],
+            water=request.form['water'],
+            cleaning=request.form['cleaning'],
+            maintenance=request.form['maintenance'],
+            comment=request.form.get('comment', '')
+        )
+        db.session.add(response)
+        db.session.commit()
+        return redirect(url_for('thankyou'))
 
 @app.route('/thankyou')
 def thankyou():
@@ -53,6 +85,20 @@ def thankyou():
 
 @app.route('/results')
 def results():
+    # Проверяем существование таблицы
+    inspector = db.inspect(db.engine)
+    if not inspector.has_table('response'):
+        db.create_all()
+        stats = {
+            'heating': [0,0,0,0,0],
+            'water': [0,0,0,0,0],
+            'cleaning': [0,0,0,0,0],
+            'maintenance': [0,0,0,0,0],
+            'total': 0
+        }
+        averages = {'heating': 0, 'water': 0, 'cleaning': 0, 'maintenance': 0}
+        return render_template('results.html', stats=stats, averages=averages)
+    
     responses = Response.query.all()
     
     stats = {
@@ -91,6 +137,12 @@ def login():
 @app.route('/admin')
 @admin_required
 def admin():
+    # Проверяем существование таблицы
+    inspector = db.inspect(db.engine)
+    if not inspector.has_table('response'):
+        db.create_all()
+        return render_template('admin.html', responses=[])
+    
     responses = Response.query.order_by(Response.timestamp.desc()).all()
     return render_template('admin.html', responses=responses)
 
@@ -98,6 +150,14 @@ def admin():
 def logout():
     session.pop('admin_logged_in', None)
     return redirect(url_for('index'))
+
+# ✅ ФИКС: для production (gunicorn)
+with app.app_context():
+    try:
+        db.create_all()
+        print("✅ База данных создана/подключена")
+    except Exception as e:
+        print(f"⚠️ Ошибка при создании БД: {e}")
 
 if __name__ == '__main__':
     with app.app_context():
