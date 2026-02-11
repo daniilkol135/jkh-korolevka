@@ -133,6 +133,11 @@
             color: var(--text-color);
             font-weight: 500;
         }
+        .no-data {
+            text-align: center;
+            padding: 50px;
+            color: var(--text-muted);
+        }
     </style>
 </head>
 <body>
@@ -152,6 +157,14 @@
         <div class="text-center mb-5">
             <span class="badge bg-primary p-3 fs-6">Всего проголосовало: {{ stats.total }} человек</span>
         </div>
+        
+        {% if stats.total == 0 %}
+        <div class="no-data">
+            <h3>😢 Пока нет данных</h3>
+            <p class="lead">Будьте первым, кто пройдет опрос!</p>
+            <a href="/" class="btn btn-primary btn-lg mt-3">Пройти опрос</a>
+        </div>
+        {% else %}
         
         <!-- Карточки со средними оценками (6 штук) -->
         <div class="row g-4 mb-5">
@@ -256,6 +269,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <div class="text-center mt-4">
             <a href="/" class="btn btn-primary btn-lg px-5">← Вернуться к опросу</a>
@@ -273,39 +287,58 @@
             {id: 'garbageChart', label: 'Вывоз мусора', data: {{ stats.garbage }}}
         ];
 
+        // Создаем графики только если есть данные
         charts.forEach(chart => {
-            const ctx = document.getElementById(chart.id).getContext('2d');
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['1', '2', '3', '4', '5'],
-                    datasets: [{
-                        label: 'Количество оценок',
-                        data: chart.data,
-                        backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#198754', '#0d6efd'],
-                        borderRadius: 5
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: { stepSize: 1, precision: 0 }
-                        }
+            const canvas = document.getElementById(chart.id);
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['1', '2', '3', '4', '5'],
+                        datasets: [{
+                            label: 'Количество оценок',
+                            data: chart.data,
+                            backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#198754', '#0d6efd'],
+                            borderRadius: 5
+                        }]
                     },
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: chart.label,
-                            font: { size: 14, weight: 'bold' },
-                            color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#e9ecef' : '#212529'
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { 
+                                    stepSize: 1, 
+                                    precision: 0,
+                                    color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#e9ecef' : '#212529'
+                                },
+                                grid: {
+                                    color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#4a4f62' : '#dee2e6'
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#e9ecef' : '#212529'
+                                },
+                                grid: {
+                                    color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#4a4f62' : '#dee2e6'
+                                }
+                            }
                         },
-                        legend: { display: false }
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: chart.label,
+                                font: { size: 14, weight: 'bold' },
+                                color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#e9ecef' : '#212529'
+                            },
+                            legend: { display: false }
+                        }
                     }
-                }
-            });
+                });
+            }
         });
 
         // ======== ПЕРЕКЛЮЧАТЕЛЬ ТЕМ ========
@@ -327,11 +360,13 @@
                 document.documentElement.setAttribute('data-theme', 'light');
                 localStorage.setItem('theme', 'light');
             }
-            // Перезагружаем графики с новыми цветами текста
+            // Перезагружаем страницу чтобы обновить цвета графиков
             location.reload();
         }
 
-        toggleSwitch.addEventListener('change', switchTheme, false);
+        if (toggleSwitch) {
+            toggleSwitch.addEventListener('change', switchTheme, false);
+        }
     </script>
 </body>
 </html>
