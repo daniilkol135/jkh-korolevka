@@ -7,86 +7,251 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { background: #f8f9fa; }
-        .stat-card { transition: transform 0.2s; border: none; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); }
-        .stat-card:hover { transform: translateY(-5px); }
-        .score { font-size: 2.5rem; font-weight: 700; color: #0d6efd; }
+        /* ======== СВЕТЛАЯ ТЕМА ======== */
+        :root {
+            --bg-color: #f8f9fa;
+            --card-bg: white;
+            --text-color: #212529;
+            --text-muted: #6c757d;
+            --border-color: #dee2e6;
+            --stat-card-bg: white;
+            --stat-card-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            --btn-primary: #0d6efd;
+            --btn-primary-hover: #0b5ed7;
+        }
+
+        /* ======== ТЁМНАЯ ТЕМА ======== */
+        [data-theme="dark"] {
+            --bg-color: #1a1e24;
+            --card-bg: #2a2f3c;
+            --text-color: #e9ecef;
+            --text-muted: #adb5bd;
+            --border-color: #4a4f62;
+            --stat-card-bg: #2a2f3c;
+            --stat-card-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            --btn-primary: #6c5ce7;
+            --btn-primary-hover: #5a4ad1;
+        }
+
+        body { 
+            background: var(--bg-color); 
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+        .stat-card { 
+            transition: transform 0.2s; 
+            border: none; 
+            border-radius: 15px; 
+            box-shadow: var(--stat-card-shadow); 
+            height: 100%;
+            background: var(--stat-card-bg);
+            color: var(--text-color);
+        }
+        .stat-card:hover { 
+            transform: translateY(-5px); 
+        }
+        .score { 
+            font-size: 2.2rem; 
+            font-weight: 700; 
+            color: var(--btn-primary); 
+        }
+        .category-name { 
+            font-size: 0.9rem; 
+            color: var(--text-muted); 
+        }
+        .card {
+            background: var(--card-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+        h1, h2, h3, h4, h5, h6 {
+            color: var(--text-color);
+        }
+        .text-muted {
+            color: var(--text-muted) !important;
+        }
+        .btn-primary {
+            background: var(--btn-primary);
+            border-color: var(--btn-primary);
+        }
+        .btn-primary:hover {
+            background: var(--btn-primary-hover);
+            border-color: var(--btn-primary-hover);
+        }
+
+        /* ======== ПЕРЕКЛЮЧАТЕЛЬ ТЕМ ======== */
+        .theme-switch-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            margin-bottom: 20px;
+        }
+        .theme-switch {
+            display: inline-block;
+            height: 34px;
+            position: relative;
+            width: 60px;
+        }
+        .theme-switch input {
+            display: none;
+        }
+        .slider {
+            background: #ccc;
+            bottom: 0;
+            cursor: pointer;
+            left: 0;
+            position: absolute;
+            right: 0;
+            top: 0;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            background: white;
+            bottom: 4px;
+            content: "☀️";
+            height: 26px;
+            left: 4px;
+            position: absolute;
+            transition: .4s;
+            width: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        input:checked + .slider {
+            background: #2c3e50;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+            content: "🌙";
+        }
+        .theme-label {
+            margin-right: 10px;
+            color: var(--text-color);
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
-    <div class="container py-5">
+    <div class="container-fluid py-5 px-4">
+        <!-- Переключатель тем -->
+        <div class="theme-switch-wrapper">
+            <span class="theme-label">Тема:</span>
+            <label class="theme-switch">
+                <input type="checkbox" id="theme-toggle">
+                <span class="slider"></span>
+            </label>
+        </div>
+
         <h1 class="text-center mb-2">📊 Результаты опроса</h1>
-        <h2 class="text-center text-muted h4 mb-4">мкр Королевка</h2>
+        <h2 class="text-center h4 mb-4">мкр Королевка</h2>
         
         <div class="text-center mb-5">
             <span class="badge bg-primary p-3 fs-6">Всего проголосовало: {{ stats.total }} человек</span>
         </div>
         
+        <!-- Карточки со средними оценками (6 штук) -->
         <div class="row g-4 mb-5">
-            <div class="col-md-3">
-                <div class="card stat-card p-3 text-center">
+            <div class="col-md-4 col-lg-2">
+                <div class="card stat-card p-2 text-center">
                     <div class="card-body">
-                        <h5 class="card-title text-muted">Отопление</h5>
-                        <div class="score">{{ averages.heating }}</div>
+                        <div class="category-name">Уборка в подъезде</div>
+                        <div class="score">{{ averages.cleaning_inside }}</div>
                         <p class="text-muted mb-0">из 5</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card stat-card p-3 text-center">
+            <div class="col-md-4 col-lg-2">
+                <div class="card stat-card p-2 text-center">
                     <div class="card-body">
-                        <h5 class="card-title text-muted">Водоснабжение</h5>
-                        <div class="score">{{ averages.water }}</div>
+                        <div class="category-name">Освещение в подъезде</div>
+                        <div class="score">{{ averages.lighting_inside }}</div>
                         <p class="text-muted mb-0">из 5</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card stat-card p-3 text-center">
+            <div class="col-md-4 col-lg-2">
+                <div class="card stat-card p-2 text-center">
                     <div class="card-body">
-                        <h5 class="card-title text-muted">Уборка</h5>
-                        <div class="score">{{ averages.cleaning }}</div>
+                        <div class="category-name">Работа лифта</div>
+                        <div class="score">{{ averages.elevator }}</div>
                         <p class="text-muted mb-0">из 5</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card stat-card p-3 text-center">
+            <div class="col-md-4 col-lg-2">
+                <div class="card stat-card p-2 text-center">
                     <div class="card-body">
-                        <h5 class="card-title text-muted">Работа УК</h5>
-                        <div class="score">{{ averages.maintenance }}</div>
+                        <div class="category-name">Уборка снега</div>
+                        <div class="score">{{ averages.snow_removal }}</div>
+                        <p class="text-muted mb-0">из 5</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 col-lg-2">
+                <div class="card stat-card p-2 text-center">
+                    <div class="card-body">
+                        <div class="category-name">Уличное освещение</div>
+                        <div class="score">{{ averages.lighting_outside }}</div>
+                        <p class="text-muted mb-0">из 5</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 col-lg-2">
+                <div class="card stat-card p-2 text-center">
+                    <div class="card-body">
+                        <div class="category-name">Вывоз мусора</div>
+                        <div class="score">{{ averages.garbage }}</div>
                         <p class="text-muted mb-0">из 5</p>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- Графики (6 штук) -->
         <div class="row">
-            <div class="col-md-6 mb-4">
-                <div class="card">
-                    <div class="card-body">
-                        <canvas id="heatingChart"></canvas>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 mb-4">
-                <div class="card">
-                    <div class="card-body">
-                        <canvas id="waterChart"></canvas>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 mb-4">
-                <div class="card">
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100">
                     <div class="card-body">
                         <canvas id="cleaningChart"></canvas>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6 mb-4">
-                <div class="card">
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100">
                     <div class="card-body">
-                        <canvas id="maintenanceChart"></canvas>
+                        <canvas id="lightingInChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <canvas id="elevatorChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <canvas id="snowChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <canvas id="lightingOutChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <canvas id="garbageChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -98,11 +263,14 @@
     </div>
 
     <script>
+        // Данные из Flask
         const charts = [
-            {id: 'heatingChart', label: 'Отопление', data: {{ stats.heating }}},
-            {id: 'waterChart', label: 'Водоснабжение', data: {{ stats.water }}},
-            {id: 'cleaningChart', label: 'Уборка', data: {{ stats.cleaning }}},
-            {id: 'maintenanceChart', label: 'Работа УК', data: {{ stats.maintenance }}}
+            {id: 'cleaningChart', label: 'Уборка в подъезде', data: {{ stats.cleaning_inside }}},
+            {id: 'lightingInChart', label: 'Освещение в подъезде', data: {{ stats.lighting_inside }}},
+            {id: 'elevatorChart', label: 'Работа лифта', data: {{ stats.elevator }}},
+            {id: 'snowChart', label: 'Уборка снега', data: {{ stats.snow_removal }}},
+            {id: 'lightingOutChart', label: 'Уличное освещение', data: {{ stats.lighting_outside }}},
+            {id: 'garbageChart', label: 'Вывоз мусора', data: {{ stats.garbage }}}
         ];
 
         charts.forEach(chart => {
@@ -112,7 +280,7 @@
                 data: {
                     labels: ['1', '2', '3', '4', '5'],
                     datasets: [{
-                        label: chart.label,
+                        label: 'Количество оценок',
                         data: chart.data,
                         backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#198754', '#0d6efd'],
                         borderRadius: 5
@@ -120,22 +288,50 @@
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: true,
                     scales: {
                         y: {
                             beginAtZero: true,
-                            ticks: { stepSize: 1 }
+                            ticks: { stepSize: 1, precision: 0 }
                         }
                     },
                     plugins: {
                         title: {
                             display: true,
                             text: chart.label,
-                            font: { size: 16, weight: 'bold' }
-                        }
+                            font: { size: 14, weight: 'bold' },
+                            color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#e9ecef' : '#212529'
+                        },
+                        legend: { display: false }
                     }
                 }
             });
         });
+
+        // ======== ПЕРЕКЛЮЧАТЕЛЬ ТЕМ ========
+        const toggleSwitch = document.querySelector('#theme-toggle');
+        const currentTheme = localStorage.getItem('theme');
+
+        if (currentTheme) {
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            if (currentTheme === 'dark') {
+                toggleSwitch.checked = true;
+            }
+        }
+
+        function switchTheme(e) {
+            if (e.target.checked) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+            }
+            // Перезагружаем графики с новыми цветами текста
+            location.reload();
+        }
+
+        toggleSwitch.addEventListener('change', switchTheme, false);
     </script>
 </body>
 </html>
