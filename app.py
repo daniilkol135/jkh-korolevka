@@ -7,11 +7,11 @@ import os
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-this-key-in-production')
 
-# ✅ ФИКС: правильный путь для SQLite на Render
+# Путь для SQLite на Render
 basedir = os.path.abspath(os.path.dirname(__file__))
 db_path = os.path.join(basedir, 'instance', 'poll.db')
 
-# Создаем папку instance, если её нет
+# Создаем папку instance
 os.makedirs(os.path.join(basedir, 'instance'), exist_ok=True)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + db_path
@@ -19,25 +19,31 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Модель данных - название таблицы будет 'response'
+# ============ МОДЕЛЬ ДАННЫХ ============
+# 6 новых вопросов по ЖКХ
 class Response(db.Model):
-    __tablename__ = 'response'  # явно указываем имя таблицы
+    __tablename__ = 'response'
     id = db.Column(db.Integer, primary_key=True)
-    heating = db.Column(db.Integer)
-    water = db.Column(db.Integer)
-    cleaning = db.Column(db.Integer)
-    maintenance = db.Column(db.Integer)
+    
+    # Новые вопросы
+    cleaning_inside = db.Column(db.Integer)  # Уборка внутри подъезда
+    lighting_inside = db.Column(db.Integer)  # Освещение внутри подъезда
+    elevator = db.Column(db.Integer)         # Работа лифта
+    snow_removal = db.Column(db.Integer)     # Уборка снега с тротуаров
+    lighting_outside = db.Column(db.Integer) # Уличное освещение во дворе
+    garbage = db.Column(db.Integer)          # Вывоз мусора
+    
     comment = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.now)
 
-# ✅ ФИКС: создаем таблицы при первом запросе
+# ============ СОЗДАНИЕ ТАБЛИЦ ============
 @app.before_request
 def create_tables():
     if not hasattr(app, 'tables_created'):
         db.create_all()
         app.tables_created = True
 
-# Декоратор для админки
+# ============ ДЕКОРАТОР АДМИНКИ ============
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -46,18 +52,22 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# ============ СТРАНИЦА ОПРОСА ============
 @app.route('/')
 def index():
     return render_template('index.html')
 
+# ============ ОТПРАВКА ОТВЕТОВ ============
 @app.route('/submit', methods=['POST'])
 def submit():
     try:
         response = Response(
-            heating=request.form['heating'],
-            water=request.form['water'],
-            cleaning=request.form['cleaning'],
-            maintenance=request.form['maintenance'],
+            cleaning_inside=request.form['cleaning_inside'],
+            lighting_inside=request.form['lighting_inside'],
+            elevator=request.form['elevator'],
+            snow_removal=request.form['snow_removal'],
+            lighting_outside=request.form['lighting_outside'],
+            garbage=request.form['garbage'],
             comment=request.form.get('comment', '')
         )
         db.session.add(response)
@@ -65,58 +75,75 @@ def submit():
         return redirect(url_for('thankyou'))
     except Exception as e:
         print(f"Error saving response: {e}")
-        # Если таблицы нет, создаем её
         db.create_all()
-        # Пробуем снова
         response = Response(
-            heating=request.form['heating'],
-            water=request.form['water'],
-            cleaning=request.form['cleaning'],
-            maintenance=request.form['maintenance'],
+            cleaning_inside=request.form['cleaning_inside'],
+            lighting_inside=request.form['lighting_inside'],
+            elevator=request.form['elevator'],
+            snow_removal=request.form['snow_removal'],
+            lighting_outside=request.form['lighting_outside'],
+            garbage=request.form['garbage'],
             comment=request.form.get('comment', '')
         )
         db.session.add(response)
         db.session.commit()
         return redirect(url_for('thankyou'))
 
+# ============ СТРАНИЦА СПАСИБО ============
 @app.route('/thankyou')
 def thankyou():
     return render_template('thankyou.html')
 
+# ============ СТРАНИЦА РЕЗУЛЬТАТОВ ============
 @app.route('/results')
 def results():
-    # Проверяем существование таблицы
     inspector = db.inspect(db.engine)
     if not inspector.has_table('response'):
         db.create_all()
         stats = {
-            'heating': [0,0,0,0,0],
-            'water': [0,0,0,0,0],
-            'cleaning': [0,0,0,0,0],
-            'maintenance': [0,0,0,0,0],
+            'cleaning_inside': [0,0,0,0,0],
+            'lighting_inside': [0,0,0,0,0],
+            'elevator': [0,0,0,0,0],
+            'snow_removal': [0,0,0,0,0],
+            'lighting_outside': [0,0,0,0,0],
+            'garbage': [0,0,0,0,0],
             'total': 0
         }
-        averages = {'heating': 0, 'water': 0, 'cleaning': 0, 'maintenance': 0}
+        averages = {
+            'cleaning_inside': 0,
+            'lighting_inside': 0,
+            'elevator': 0,
+            'snow_removal': 0,
+            'lighting_outside': 0,
+            'garbage': 0
+        }
         return render_template('results.html', stats=stats, averages=averages)
     
     responses = Response.query.all()
     
     stats = {
-        'heating': [0,0,0,0,0],
-        'water': [0,0,0,0,0],
-        'cleaning': [0,0,0,0,0],
-        'maintenance': [0,0,0,0,0],
+        'cleaning_inside': [0,0,0,0,0],
+        'lighting_inside': [0,0,0,0,0],
+        'elevator': [0,0,0,0,0],
+        'snow_removal': [0,0,0,0,0],
+        'lighting_outside': [0,0,0,0,0],
+        'garbage': [0,0,0,0,0],
         'total': len(responses)
     }
     
     for r in responses:
-        stats['heating'][r.heating-1] += 1
-        stats['water'][r.water-1] += 1
-        stats['cleaning'][r.cleaning-1] += 1
-        stats['maintenance'][r.maintenance-1] += 1
+        stats['cleaning_inside'][r.cleaning_inside-1] += 1
+        stats['lighting_inside'][r.lighting_inside-1] += 1
+        stats['elevator'][r.elevator-1] += 1
+        stats['snow_removal'][r.snow_removal-1] += 1
+        stats['lighting_outside'][r.lighting_outside-1] += 1
+        stats['garbage'][r.garbage-1] += 1
     
     averages = {}
-    for key in ['heating', 'water', 'cleaning', 'maintenance']:
+    categories = ['cleaning_inside', 'lighting_inside', 'elevator', 
+                  'snow_removal', 'lighting_outside', 'garbage']
+    
+    for key in categories:
         if stats['total'] > 0:
             avg = sum([(i+1)*stats[key][i] for i in range(5)]) / stats['total']
             averages[key] = round(avg, 1)
@@ -125,6 +152,7 @@ def results():
     
     return render_template('results.html', stats=stats, averages=averages)
 
+# ============ ВХОД В АДМИНКУ ============
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -134,10 +162,10 @@ def login():
             return redirect(url_for('admin'))
     return render_template('login.html')
 
+# ============ АДМИН-ПАНЕЛЬ ============
 @app.route('/admin')
 @admin_required
 def admin():
-    # Проверяем существование таблицы
     inspector = db.inspect(db.engine)
     if not inspector.has_table('response'):
         db.create_all()
@@ -146,12 +174,13 @@ def admin():
     responses = Response.query.order_by(Response.timestamp.desc()).all()
     return render_template('admin.html', responses=responses)
 
+# ============ ВЫХОД ИЗ АДМИНКИ ============
 @app.route('/logout')
 def logout():
     session.pop('admin_logged_in', None)
     return redirect(url_for('index'))
 
-# ✅ ФИКС: для production (gunicorn)
+# ============ ИНИЦИАЛИЗАЦИЯ ============
 with app.app_context():
     try:
         db.create_all()
