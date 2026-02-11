@@ -15,6 +15,9 @@
             --border-color: #dee2e6;
             --table-header-bg: #f8f9fa;
             --table-hover: #f2f2f2;
+            --btn-primary: #0d6efd;
+            --btn-success: #198754;
+            --btn-danger: #dc3545;
         }
 
         /* ======== ТЁМНАЯ ТЕМА ======== */
@@ -26,33 +29,48 @@
             --border-color: #4a4f62;
             --table-header-bg: #2a2f3c;
             --table-hover: #3a4050;
+            --btn-primary: #6c5ce7;
+            --btn-success: #20c997;
+            --btn-danger: #e74c3c;
         }
 
         body { 
             background: var(--bg-color); 
             color: var(--text-color);
             transition: all 0.3s ease;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
         .card {
             background: var(--card-bg);
             color: var(--text-color);
             border: 1px solid var(--border-color);
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
         }
         .card-header {
             background: var(--card-bg);
             color: var(--text-color);
             border-bottom: 1px solid var(--border-color);
+            border-radius: 15px 15px 0 0 !important;
+            padding: 1rem 1.5rem;
         }
         .table {
             color: var(--text-color);
+            margin-bottom: 0;
         }
         .table thead th {
             background: var(--table-header-bg);
             color: var(--text-color);
             border-color: var(--border-color);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         .table td {
             border-color: var(--border-color);
+            vertical-align: middle;
+            font-size: 0.9rem;
         }
         .table-hover tbody tr:hover {
             background: var(--table-hover);
@@ -63,15 +81,51 @@
             white-space: nowrap; 
             overflow: hidden; 
             text-overflow: ellipsis; 
+            color: var(--text-muted);
         }
-        .badge-score { 
-            width: 35px; 
+        .badge {
+            font-size: 0.8rem;
+            padding: 0.4rem 0.6rem;
+            font-weight: 500;
         }
         h1, h2, h3, h4, h5, h6 {
             color: var(--text-color);
         }
         .text-muted {
             color: var(--text-muted) !important;
+        }
+        .btn {
+            border-radius: 10px;
+            padding: 0.5rem 1.2rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: var(--btn-primary);
+            border-color: var(--btn-primary);
+        }
+        .btn-primary:hover {
+            background: var(--btn-primary);
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        .btn-success {
+            background: var(--btn-success);
+            border-color: var(--btn-success);
+        }
+        .btn-success:hover {
+            background: var(--btn-success);
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        .btn-danger {
+            background: var(--btn-danger);
+            border-color: var(--btn-danger);
+        }
+        .btn-danger:hover {
+            background: var(--btn-danger);
+            opacity: 0.9;
+            transform: translateY(-2px);
         }
 
         /* ======== ПЕРЕКЛЮЧАТЕЛЬ ТЕМ ======== */
@@ -128,10 +182,39 @@
             color: var(--text-color);
             font-weight: 500;
         }
+        .stats-summary {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .stat-item {
+            background: var(--table-hover);
+            padding: 0.8rem 1.5rem;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--btn-primary);
+        }
+        .address-badge {
+            background: var(--table-hover);
+            color: var(--text-color);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            border: 1px solid var(--border-color);
+        }
     </style>
 </head>
 <body>
-    <div class="container-fluid py-4">
+    <div class="container-fluid py-4 px-4">
         <!-- Переключатель тем -->
         <div class="theme-switch-wrapper">
             <span class="theme-label">Тема:</span>
@@ -142,43 +225,156 @@
         </div>
 
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1>🔐 Панель управления</h1>
-            <a href="/logout" class="btn btn-danger">Выйти</a>
+            <div>
+                <h1 class="display-6 fw-bold mb-1">🔐 Панель управления</h1>
+                <p class="text-muted mb-0">мкр Королевка • Смоленск</p>
+            </div>
+            <a href="/logout" class="btn btn-danger">
+                <i class="bi bi-box-arrow-right"></i> Выйти
+            </a>
         </div>
 
-        <div class="card shadow">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Все ответы жителей</h5>
-                <span class="badge bg-primary">{{ responses|length }} записей</span>
+        <!-- Статистика -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="stat-label">Всего ответов</div>
+                        <div class="stat-value">{{ responses|length }}</div>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="stat-label">Уникальных адресов</div>
+                        <div class="stat-value">
+                            {% set unique_addresses = [] %}
+                            {% for r in responses %}
+                                {% if r.address and r.address not in unique_addresses %}
+                                    {% set unique_addresses = unique_addresses.append(r.address) %}
+                                {% endif %}
+                            {% endfor %}
+                            {{ unique_addresses|length }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="stat-label">Средняя оценка</div>
+                        <div class="stat-value">
+                            {% set total_score = 0 %}
+                            {% set total_count = 0 %}
+                            {% for r in responses %}
+                                {% set total_score = total_score + r.cleaning_inside + r.lighting_inside + r.elevator + r.snow_removal + r.lighting_outside + r.garbage %}
+                                {% set total_count = total_count + 6 %}
+                            {% endfor %}
+                            {% if total_count > 0 %}
+                                {{ "%.2f"|format(total_score / total_count) }}
+                            {% else %}
+                                0
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="stat-label">Комментариев</div>
+                        <div class="stat-value">
+                            {% set comments_count = 0 %}
+                            {% for r in responses %}
+                                {% if r.comment and r.comment|trim != '' %}
+                                    {% set comments_count = comments_count + 1 %}
+                                {% endif %}
+                            {% endfor %}
+                            {{ comments_count }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Основная таблица -->
+        <div class="card shadow">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold">📋 Все ответы жителей</h5>
+                <span class="badge bg-primary fs-6">{{ responses|length }} записей</span>
+            </div>
+            <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="table table-hover mb-0">
                         <thead>
                             <tr>
                                 <th>ID</th>
                                 <th>Дата</th>
-                                <th>Уборка в подъезде</th>
-                                <th>Освещение в подъезде</th>
-                                <th>Работа лифта</th>
-                                <th>Уборка снега</th>
-                                <th>Уличное освещение</th>
-                                <th>Вывоз мусора</th>
-                                <th>Комментарий</th>
+                                <th>📍 Адрес</th>
+                                <th>🧹 Уборка</th>
+                                <th>💡 Освещение</th>
+                                <th>🛗 Лифт</th>
+                                <th>❄️ Снег</th>
+                                <th>🌙 Улица</th>
+                                <th>🗑️ Мусор</th>
+                                <th>💬 Комментарий</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for r in responses %}
                             <tr>
-                                <td>{{ r.id }}</td>
+                                <td><span class="fw-bold">#{{ r.id }}</span></td>
                                 <td>{{ r.timestamp.strftime('%d.%m.%Y %H:%M') if r.timestamp else '—' }}</td>
-                                <td><span class="badge bg-{{ 'success' if r.cleaning_inside >= 4 else 'warning' if r.cleaning_inside == 3 else 'danger' }} badge-score">{{ r.cleaning_inside }}</span></td>
-                                <td><span class="badge bg-{{ 'success' if r.lighting_inside >= 4 else 'warning' if r.lighting_inside == 3 else 'danger' }}">{{ r.lighting_inside }}</span></td>
-                                <td><span class="badge bg-{{ 'success' if r.elevator >= 4 else 'warning' if r.elevator == 3 else 'danger' }}">{{ r.elevator }}</span></td>
-                                <td><span class="badge bg-{{ 'success' if r.snow_removal >= 4 else 'warning' if r.snow_removal == 3 else 'danger' }}">{{ r.snow_removal }}</span></td>
-                                <td><span class="badge bg-{{ 'success' if r.lighting_outside >= 4 else 'warning' if r.lighting_outside == 3 else 'danger' }}">{{ r.lighting_outside }}</span></td>
-                                <td><span class="badge bg-{{ 'success' if r.garbage >= 4 else 'warning' if r.garbage == 3 else 'danger' }}">{{ r.garbage }}</span></td>
-                                <td class="comment-cell" title="{{ r.comment }}">{{ r.comment or '—' }}</td>
+                                <td>
+                                    <span class="address-badge">
+                                        📍 {{ r.address or 'Не указан' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if r.cleaning_inside >= 4 else 'warning' if r.cleaning_inside == 3 else 'danger' }}" style="width: 40px;">
+                                        {{ r.cleaning_inside }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if r.lighting_inside >= 4 else 'warning' if r.lighting_inside == 3 else 'danger' }}" style="width: 40px;">
+                                        {{ r.lighting_inside }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if r.elevator >= 4 else 'warning' if r.elevator == 3 else 'danger' }}" style="width: 40px;">
+                                        {{ r.elevator }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if r.snow_removal >= 4 else 'warning' if r.snow_removal == 3 else 'danger' }}" style="width: 40px;">
+                                        {{ r.snow_removal }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if r.lighting_outside >= 4 else 'warning' if r.lighting_outside == 3 else 'danger' }}" style="width: 40px;">
+                                        {{ r.lighting_outside }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if r.garbage >= 4 else 'warning' if r.garbage == 3 else 'danger' }}" style="width: 40px;">
+                                        {{ r.garbage }}
+                                    </span>
+                                </td>
+                                <td class="comment-cell" title="{{ r.comment }}">
+                                    {% if r.comment %}
+                                        {{ r.comment[:50] }}{% if r.comment|length > 50 %}...{% endif %}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="10" class="text-center py-5">
+                                    <h4 class="text-muted mb-3">😢 Пока нет ответов</h4>
+                                    <p class="mb-0">Будьте первым, кто пройдет опрос!</p>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -187,11 +383,19 @@
             </div>
         </div>
 
-        <div class="mt-4">
-            <a href="/" class="btn btn-primary">🏠 На главную</a>
-            <a href="/results" class="btn btn-success">📊 Результаты</a>
+        <!-- Кнопки навигации -->
+        <div class="mt-4 d-flex gap-2">
+            <a href="/" class="btn btn-primary">
+                <i class="bi bi-house"></i> На главную
+            </a>
+            <a href="/results" class="btn btn-success">
+                📊 Результаты
+            </a>
         </div>
     </div>
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
     <!-- Скрипт для переключения тем -->
     <script>
