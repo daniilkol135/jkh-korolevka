@@ -45,14 +45,14 @@ class Response(db.Model):
     cleaning_inside = db.Column(db.Integer)        # Уборка внутри подъезда
     lighting_inside = db.Column(db.Integer)        # Освещение внутри подъезда
     elevator = db.Column(db.Integer)                # Работа лифта
-    snow_sidewalks = db.Column(db.Integer)          # ❄️ Уборка снега с тротуаров (НОВОЕ)
-    snow_road = db.Column(db.Integer)               # ❄️ Уборка снега с проезжих частей (НОВОЕ)
+    snow_sidewalks = db.Column(db.Integer)          # ❄️ Уборка снега с тротуаров
+    snow_road = db.Column(db.Integer)               # ❄️ Уборка снега с проезжих частей
     lighting_outside = db.Column(db.Integer)        # Уличное освещение во дворе
     garbage = db.Column(db.Integer)                  # Вывоз мусора
     
     timestamp = db.Column(db.DateTime, default=datetime.now)
     
-    # Статус модерации (теперь только для всего ответа)
+    # Статус модерации
     moderated = db.Column(db.Boolean, default=False)
     moderated_at = db.Column(db.DateTime, nullable=True)
     moderated_by = db.Column(db.String(100), nullable=True)
@@ -151,7 +151,7 @@ def submit():
 def thankyou():
     return render_template('thankyou.html')
 
-# ============ СТРАНИЦА РЕЗУЛЬТАТОВ (ПУБЛИЧНАЯ) ============
+# ============ СТРАНИЦА РЕЗУЛЬТАТОВ ============
 @app.route('/results')
 def results():
     # Только ОДОБРЕННЫЕ ответы
@@ -172,13 +172,21 @@ def results():
     address_stats = {addr: 0 for addr in ADDRESSES}
     
     for r in responses:
-        stats['cleaning_inside'][r.cleaning_inside-1] += 1
-        stats['lighting_inside'][r.lighting_inside-1] += 1
-        stats['elevator'][r.elevator-1] += 1
-        stats['snow_sidewalks'][r.snow_sidewalks-1] += 1
-        stats['snow_road'][r.snow_road-1] += 1
-        stats['lighting_outside'][r.lighting_outside-1] += 1
-        stats['garbage'][r.garbage-1] += 1
+        # Проверяем, что значения не пустые (не None)
+        if r.cleaning_inside is not None:
+            stats['cleaning_inside'][r.cleaning_inside-1] += 1
+        if r.lighting_inside is not None:
+            stats['lighting_inside'][r.lighting_inside-1] += 1
+        if r.elevator is not None:
+            stats['elevator'][r.elevator-1] += 1
+        if r.snow_sidewalks is not None:
+            stats['snow_sidewalks'][r.snow_sidewalks-1] += 1
+        if r.snow_road is not None:
+            stats['snow_road'][r.snow_road-1] += 1
+        if r.lighting_outside is not None:
+            stats['lighting_outside'][r.lighting_outside-1] += 1
+        if r.garbage is not None:
+            stats['garbage'][r.garbage-1] += 1
         
         if r.address in address_stats:
             address_stats[r.address] += 1
@@ -189,8 +197,18 @@ def results():
     
     for key in categories:
         if stats['total'] > 0:
-            avg = sum([(i+1)*stats[key][i] for i in range(5)]) / stats['total']
-            averages[key] = round(avg, 1)
+            # Суммируем только не-None значения
+            total_sum = 0
+            total_count = 0
+            for r in responses:
+                val = getattr(r, key)
+                if val is not None:
+                    total_sum += val
+                    total_count += 1
+            if total_count > 0:
+                averages[key] = round(total_sum / total_count, 1)
+            else:
+                averages[key] = 0
         else:
             averages[key] = 0
     
@@ -273,13 +291,13 @@ def export_csv():
             r.id,
             r.timestamp.strftime('%d.%m.%Y %H:%M') if r.timestamp else '',
             r.address,
-            r.cleaning_inside,
-            r.lighting_inside,
-            r.elevator,
-            r.snow_sidewalks,
-            r.snow_road,
-            r.lighting_outside,
-            r.garbage,
+            r.cleaning_inside or '',
+            r.lighting_inside or '',
+            r.elevator or '',
+            r.snow_sidewalks or '',
+            r.snow_road or '',
+            r.lighting_outside or '',
+            r.garbage or '',
             'Одобрено' if r.moderated else 'На модерации',
             r.moderated_at.strftime('%d.%m.%Y %H:%M') if r.moderated_at else ''
         ])
