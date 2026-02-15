@@ -385,7 +385,7 @@
                                         <button class="btn btn-danger btn-sm" onclick="moderate({{ r.id }}, 'delete')">
                                             🗑️
                                         </button>
-                                        <button class="btn btn-info btn-sm" onclick="showComment({{ r.id }}, '{{ r.comment|escapejs }}')">
+                                        <button class="btn btn-info btn-sm" onclick="showComment({{ r.id }}, '{{ r.comment|replace("'", "\\'")|replace("\n", "\\n")|safe }}')">
                                             👁️
                                         </button>
                                     </div>
