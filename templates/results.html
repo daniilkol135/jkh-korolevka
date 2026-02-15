@@ -60,17 +60,18 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.15);
         }
         .score { 
-            font-size: 2.2rem; 
+            font-size: 2rem; 
             font-weight: 700; 
             color: var(--btn-primary); 
             line-height: 1.2;
         }
         .category-name { 
-            font-size: 0.85rem; 
+            font-size: 0.8rem; 
             color: var(--text-muted); 
             text-transform: uppercase;
             letter-spacing: 0.5px;
             font-weight: 600;
+            min-height: 40px;
         }
         .card {
             background: var(--card-bg);
@@ -242,9 +243,9 @@
         </div>
         {% else %}
         
-        <!-- Карточки со средними оценками -->
+        <!-- Карточки со средними оценками (7 штук) -->
         <div class="row g-4 mb-5">
-            <div class="col-md-4 col-lg-2">
+            <div class="col-md-4 col-lg-3">
                 <div class="card stat-card p-3 text-center">
                     <div class="card-body p-2">
                         <div class="category-name mb-2">🧹 Уборка в подъезде</div>
@@ -253,7 +254,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 col-lg-2">
+            <div class="col-md-4 col-lg-3">
                 <div class="card stat-card p-3 text-center">
                     <div class="card-body p-2">
                         <div class="category-name mb-2">💡 Освещение в подъезде</div>
@@ -262,7 +263,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 col-lg-2">
+            <div class="col-md-4 col-lg-3">
                 <div class="card stat-card p-3 text-center">
                     <div class="card-body p-2">
                         <div class="category-name mb-2">🛗 Работа лифта</div>
@@ -271,16 +272,25 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 col-lg-2">
+            <div class="col-md-4 col-lg-3">
                 <div class="card stat-card p-3 text-center">
                     <div class="card-body p-2">
-                        <div class="category-name mb-2">❄️ Уборка снега</div>
-                        <div class="score">{{ averages.snow_removal }}</div>
+                        <div class="category-name mb-2">❄️ Снег (тротуары)</div>
+                        <div class="score">{{ averages.snow_sidewalks }}</div>
                         <div class="text-muted small mt-2">из 5</div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 col-lg-2">
+            <div class="col-md-4 col-lg-3">
+                <div class="card stat-card p-3 text-center">
+                    <div class="card-body p-2">
+                        <div class="category-name mb-2">❄️ Снег (дороги)</div>
+                        <div class="score">{{ averages.snow_road }}</div>
+                        <div class="text-muted small mt-2">из 5</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 col-lg-3">
                 <div class="card stat-card p-3 text-center">
                     <div class="card-body p-2">
                         <div class="category-name mb-2">🌙 Уличное освещение</div>
@@ -289,7 +299,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 col-lg-2">
+            <div class="col-md-4 col-lg-3">
                 <div class="card stat-card p-3 text-center">
                     <div class="card-body p-2">
                         <div class="category-name mb-2">🗑️ Вывоз мусора</div>
@@ -300,7 +310,7 @@
             </div>
         </div>
 
-        <!-- Графики -->
+        <!-- Графики (7 штук) -->
         <div class="row g-4 mb-5">
             <div class="col-md-6 col-lg-4">
                 <div class="card h-100">
@@ -326,7 +336,14 @@
             <div class="col-md-6 col-lg-4">
                 <div class="card h-100">
                     <div class="card-body">
-                        <canvas id="snowChart"></canvas>
+                        <canvas id="snowSidewalksChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <canvas id="snowRoadChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -403,50 +420,6 @@
                                 </tbody>
                             </table>
                         </div>
-                        
-                        <!-- Сводка по адресам -->
-                        <div class="row mt-4">
-                            <div class="col-md-6">
-                                <div class="card bg-transparent border-0">
-                                    <div class="card-body">
-                                        <h6 class="fw-bold mb-3">🏆 Самый активный дом</h6>
-                                        {% set max_votes = 0 %}
-                                        {% set best_address = '' %}
-                                        {% for address in addresses %}
-                                            {% if address_stats[address] > max_votes %}
-                                                {% set max_votes = address_stats[address] %}
-                                                {% set best_address = address %}
-                                            {% endif %}
-                                        {% endfor %}
-                                        {% if max_votes > 0 %}
-                                        <p class="mb-1 fs-5 fw-bold text-primary">{{ best_address }}</p>
-                                        <p class="text-muted">{{ max_votes }} голосов</p>
-                                        {% else %}
-                                        <p class="text-muted">Пока нет голосов</p>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card bg-transparent border-0">
-                                    <div class="card-body">
-                                        <h6 class="fw-bold mb-3">📊 Охват домов</h6>
-                                        {% set active_houses = 0 %}
-                                        {% for address in addresses %}
-                                            {% if address_stats[address] > 0 %}
-                                                {% set active_houses = active_houses + 1 %}
-                                            {% endif %}
-                                        {% endfor %}
-                                        <p class="mb-1 fs-5 fw-bold text-success">
-                                            {{ active_houses }} из {{ addresses|length }}
-                                        </p>
-                                        <p class="text-muted">
-                                            {{ "%.1f"|format(active_houses / addresses|length * 100) }}% домов
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -470,7 +443,8 @@
             {id: 'cleaningChart', label: 'Уборка в подъезде', data: {{ stats.cleaning_inside }}},
             {id: 'lightingInChart', label: 'Освещение в подъезде', data: {{ stats.lighting_inside }}},
             {id: 'elevatorChart', label: 'Работа лифта', data: {{ stats.elevator }}},
-            {id: 'snowChart', label: 'Уборка снега', data: {{ stats.snow_removal }}},
+            {id: 'snowSidewalksChart', label: 'Снег (тротуары)', data: {{ stats.snow_sidewalks }}},
+            {id: 'snowRoadChart', label: 'Снег (дороги)', data: {{ stats.snow_road }}},
             {id: 'lightingOutChart', label: 'Уличное освещение', data: {{ stats.lighting_outside }}},
             {id: 'garbageChart', label: 'Вывоз мусора', data: {{ stats.garbage }}}
         ];
