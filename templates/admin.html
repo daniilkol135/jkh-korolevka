@@ -5,6 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         /* ======== СВЕТЛАЯ ТЕМА ======== */
         :root {
@@ -18,6 +19,8 @@
             --btn-primary: #0d6efd;
             --btn-success: #198754;
             --btn-danger: #dc3545;
+            --btn-warning: #ffc107;
+            --btn-info: #0dcaf0;
         }
 
         /* ======== ТЁМНАЯ ТЕМА ======== */
@@ -32,6 +35,8 @@
             --btn-primary: #6c5ce7;
             --btn-success: #20c997;
             --btn-danger: #e74c3c;
+            --btn-warning: #f39c12;
+            --btn-info: #3498db;
         }
 
         body { 
@@ -88,17 +93,15 @@
             padding: 0.4rem 0.6rem;
             font-weight: 500;
         }
-        h1, h2, h3, h4, h5, h6 {
-            color: var(--text-color);
-        }
-        .text-muted {
-            color: var(--text-muted) !important;
-        }
         .btn {
             border-radius: 10px;
             padding: 0.5rem 1.2rem;
             font-weight: 500;
             transition: all 0.2s;
+        }
+        .btn-sm {
+            padding: 0.25rem 0.8rem;
+            font-size: 0.8rem;
         }
         .btn-primary {
             background: var(--btn-primary);
@@ -124,6 +127,26 @@
         }
         .btn-danger:hover {
             background: var(--btn-danger);
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        .btn-warning {
+            background: var(--btn-warning);
+            border-color: var(--btn-warning);
+            color: #000;
+        }
+        .btn-warning:hover {
+            background: var(--btn-warning);
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        .btn-info {
+            background: var(--btn-info);
+            border-color: var(--btn-info);
+            color: #000;
+        }
+        .btn-info:hover {
+            background: var(--btn-info);
             opacity: 0.9;
             transform: translateY(-2px);
         }
@@ -182,34 +205,55 @@
             color: var(--text-color);
             font-weight: 500;
         }
+        
+        /* Стили для модерации */
+        .moderated-row {
+            background-color: rgba(40, 167, 69, 0.05) !important;
+        }
+        .unmoderated-row {
+            background-color: rgba(255, 193, 7, 0.05) !important;
+        }
         .stats-summary {
             display: flex;
             gap: 20px;
             flex-wrap: wrap;
+            margin-bottom: 20px;
         }
         .stat-item {
-            background: var(--table-hover);
-            padding: 0.8rem 1.5rem;
-            border-radius: 10px;
+            background: var(--card-bg);
             border: 1px solid var(--border-color);
-        }
-        .stat-label {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
+            border-radius: 10px;
+            padding: 15px 25px;
+            text-align: center;
+            flex: 1;
+            min-width: 150px;
         }
         .stat-value {
-            font-size: 1.5rem;
+            font-size: 2rem;
             font-weight: 700;
             color: var(--btn-primary);
         }
-        .address-badge {
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .filter-badge {
+            cursor: pointer;
+            padding: 5px 15px;
+            border-radius: 20px;
             background: var(--table-hover);
             color: var(--text-color);
-            padding: 0.3rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
             border: 1px solid var(--border-color);
+        }
+        .filter-badge.active {
+            background: var(--btn-primary);
+            color: white;
+            border-color: var(--btn-primary);
         }
     </style>
 </head>
@@ -227,75 +271,56 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h1 class="display-6 fw-bold mb-1">🔐 Панель управления</h1>
-                <p class="text-muted mb-0">мкр Королевка • Смоленск</p>
+                <p class="text-muted mb-0">мкр Королевка, г. Смоленск</p>
             </div>
             <a href="/logout" class="btn btn-danger">
-                <i class="bi bi-box-arrow-right"></i> Выйти
+                Выйти
             </a>
         </div>
 
         <!-- Статистика -->
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="card">
-                    <div class="card-body">
-                        <div class="stat-label">Всего ответов</div>
-                        <div class="stat-value">{{ responses|length }}</div>
-                    </div>
-                </div>
+        <div class="stats-summary">
+            <div class="stat-item">
+                <div class="stat-value">{{ total_count }}</div>
+                <div class="stat-label">Всего голосов</div>
             </div>
-            <div class="col-md-3">
-                <div class="card">
-                    <div class="card-body">
-                        <div class="stat-label">Уникальных адресов</div>
-                        <div class="stat-value">
-                            {% set unique_addresses = [] %}
-                            {% for r in responses %}
-                                {% if r.address and r.address not in unique_addresses %}
-                                    {% set unique_addresses = unique_addresses.append(r.address) %}
-                                {% endif %}
-                            {% endfor %}
-                            {{ unique_addresses|length }}
-                        </div>
-                    </div>
-                </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ moderated_count }}</div>
+                <div class="stat-label">Одобрено</div>
             </div>
-            <div class="col-md-3">
-                <div class="card">
-                    <div class="card-body">
-                        <div class="stat-label">Средняя оценка</div>
-                        <div class="stat-value">
-                            {% set total_score = 0 %}
-                            {% set total_count = 0 %}
-                            {% for r in responses %}
-                                {% set total_score = total_score + r.cleaning_inside + r.lighting_inside + r.elevator + r.snow_removal + r.lighting_outside + r.garbage %}
-                                {% set total_count = total_count + 6 %}
-                            {% endfor %}
-                            {% if total_count > 0 %}
-                                {{ "%.2f"|format(total_score / total_count) }}
-                            {% else %}
-                                0
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ unmoderated_count }}</div>
+                <div class="stat-label">На модерации</div>
             </div>
-            <div class="col-md-3">
-                <div class="card">
-                    <div class="card-body">
-                        <div class="stat-label">Комментариев</div>
-                        <div class="stat-value">
-                            {% set comments_count = 0 %}
-                            {% for r in responses %}
-                                {% if r.comment and r.comment|trim != '' %}
-                                    {% set comments_count = comments_count + 1 %}
-                                {% endif %}
-                            {% endfor %}
-                            {{ comments_count }}
-                        </div>
-                    </div>
-                </div>
-            </div>
+        </div>
+
+        <!-- Кнопки экспорта -->
+        <div class="export-buttons mb-4">
+            <a href="/export/csv" class="btn btn-success">
+                📥 Скачать CSV
+            </a>
+            <a href="/export/excel" class="btn btn-success">
+                📊 Скачать Excel
+            </a>
+            <a href="/export/json" class="btn btn-info">
+                📋 Скачать JSON
+            </a>
+        </div>
+
+        <!-- Фильтры -->
+        <div class="d-flex gap-2 mb-3">
+            <span class="filter-badge {% if current_filter == 'all' %}active{% endif %}" 
+                  onclick="window.location.href='/admin?filter=all'">
+                🗂️ Все ({{ total_count }})
+            </span>
+            <span class="filter-badge {% if current_filter == 'unmoderated' %}active{% endif %}"
+                  onclick="window.location.href='/admin?filter=unmoderated'">
+                ⏳ На модерации ({{ unmoderated_count }})
+            </span>
+            <span class="filter-badge {% if current_filter == 'moderated' %}active{% endif %}"
+                  onclick="window.location.href='/admin?filter=moderated'">
+                ✅ Одобренные ({{ moderated_count }})
+            </span>
         </div>
 
         <!-- Основная таблица -->
@@ -319,48 +344,26 @@
                                 <th>🌙 Улица</th>
                                 <th>🗑️ Мусор</th>
                                 <th>💬 Комментарий</th>
+                                <th>✅ Статус</th>
+                                <th>⚙️ Действия</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for r in responses %}
-                            <tr>
+                            <tr class="{% if r.moderated %}moderated-row{% else %}unmoderated-row{% endif %}">
                                 <td><span class="fw-bold">#{{ r.id }}</span></td>
                                 <td>{{ r.timestamp.strftime('%d.%m.%Y %H:%M') if r.timestamp else '—' }}</td>
                                 <td>
-                                    <span class="address-badge">
+                                    <span class="badge bg-secondary">
                                         📍 {{ r.address or 'Не указан' }}
                                     </span>
                                 </td>
-                                <td>
-                                    <span class="badge bg-{{ 'success' if r.cleaning_inside >= 4 else 'warning' if r.cleaning_inside == 3 else 'danger' }}" style="width: 40px;">
-                                        {{ r.cleaning_inside }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge bg-{{ 'success' if r.lighting_inside >= 4 else 'warning' if r.lighting_inside == 3 else 'danger' }}" style="width: 40px;">
-                                        {{ r.lighting_inside }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge bg-{{ 'success' if r.elevator >= 4 else 'warning' if r.elevator == 3 else 'danger' }}" style="width: 40px;">
-                                        {{ r.elevator }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge bg-{{ 'success' if r.snow_removal >= 4 else 'warning' if r.snow_removal == 3 else 'danger' }}" style="width: 40px;">
-                                        {{ r.snow_removal }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge bg-{{ 'success' if r.lighting_outside >= 4 else 'warning' if r.lighting_outside == 3 else 'danger' }}" style="width: 40px;">
-                                        {{ r.lighting_outside }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge bg-{{ 'success' if r.garbage >= 4 else 'warning' if r.garbage == 3 else 'danger' }}" style="width: 40px;">
-                                        {{ r.garbage }}
-                                    </span>
-                                </td>
+                                <td><span class="badge bg-{{ 'success' if r.cleaning_inside >= 4 else 'warning' if r.cleaning_inside == 3 else 'danger' }}">{{ r.cleaning_inside }}</span></td>
+                                <td><span class="badge bg-{{ 'success' if r.lighting_inside >= 4 else 'warning' if r.lighting_inside == 3 else 'danger' }}">{{ r.lighting_inside }}</span></td>
+                                <td><span class="badge bg-{{ 'success' if r.elevator >= 4 else 'warning' if r.elevator == 3 else 'danger' }}">{{ r.elevator }}</span></td>
+                                <td><span class="badge bg-{{ 'success' if r.snow_removal >= 4 else 'warning' if r.snow_removal == 3 else 'danger' }}">{{ r.snow_removal }}</span></td>
+                                <td><span class="badge bg-{{ 'success' if r.lighting_outside >= 4 else 'warning' if r.lighting_outside == 3 else 'danger' }}">{{ r.lighting_outside }}</span></td>
+                                <td><span class="badge bg-{{ 'success' if r.garbage >= 4 else 'warning' if r.garbage == 3 else 'danger' }}">{{ r.garbage }}</span></td>
                                 <td class="comment-cell" title="{{ r.comment }}">
                                     {% if r.comment %}
                                         {{ r.comment[:50] }}{% if r.comment|length > 50 %}...{% endif %}
@@ -368,10 +371,32 @@
                                         <span class="text-muted">—</span>
                                     {% endif %}
                                 </td>
+                                <td>
+                                    {% if r.moderated %}
+                                        <span class="badge bg-success">✅ Одобрено</span>
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark">⏳ На модерации</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        {% if not r.moderated %}
+                                        <button class="btn btn-success btn-sm" onclick="moderate({{ r.id }}, 'approve')">
+                                            ✅
+                                        </button>
+                                        {% endif %}
+                                        <button class="btn btn-danger btn-sm" onclick="moderate({{ r.id }}, 'delete')">
+                                            🗑️
+                                        </button>
+                                        <button class="btn btn-info btn-sm" onclick="showComment({{ r.id }}, '{{ r.comment|escapejs }}')">
+                                            👁️
+                                        </button>
+                                    </div>
+                                </td>
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="10" class="text-center py-5">
+                                <td colspan="12" class="text-center py-5">
                                     <h4 class="text-muted mb-3">😢 Пока нет ответов</h4>
                                     <p class="mb-0">Будьте первым, кто пройдет опрос!</p>
                                 </td>
@@ -386,10 +411,13 @@
         <!-- Кнопки навигации -->
         <div class="mt-4 d-flex gap-2">
             <a href="/" class="btn btn-primary">
-                <i class="bi bi-house"></i> На главную
+                На главную
             </a>
             <a href="/results" class="btn btn-success">
                 📊 Результаты
+            </a>
+            <a href="/admin/stats" class="btn btn-info">
+                📈 Подробная статистика
             </a>
         </div>
     </div>
@@ -397,8 +425,34 @@
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
-    <!-- Скрипт для переключения тем -->
+    <!-- Скрипт для модерации -->
     <script>
+        function moderate(id, action) {
+            if (action === 'delete' && !confirm('Удалить этот комментарий?')) {
+                return;
+            }
+            
+            fetch(`/moderate/${id}/${action}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Ошибка: ' + data.message);
+                }
+            });
+        }
+
+        function showComment(id, comment) {
+            alert('Комментарий #' + id + ':\n\n' + comment);
+        }
+
+        // Переключатель тем
         const toggleSwitch = document.querySelector('#theme-toggle');
         const currentTheme = localStorage.getItem('theme');
 
