@@ -322,26 +322,43 @@
                     </div>
                 </div>
 
-                <!-- 4. Уборка снега -->
+                <!-- 4. Уборка снега с тротуаров -->
                 <div class="question-item">
-                    <label class="form-label fw-bold fs-5">4. Уборка снега с тротуаров и проезжих частей</label>
+                    <label class="form-label fw-bold fs-5">4. Уборка снега с тротуаров</label>
                     <div class="rating-group">
-                        <input type="radio" name="snow_removal" value="1" id="s1" required>
+                        <input type="radio" name="snow_sidewalks" value="1" id="s1" required>
                         <label for="s1" class="rating-label">1</label>
-                        <input type="radio" name="snow_removal" value="2" id="s2">
+                        <input type="radio" name="snow_sidewalks" value="2" id="s2">
                         <label for="s2" class="rating-label">2</label>
-                        <input type="radio" name="snow_removal" value="3" id="s3">
+                        <input type="radio" name="snow_sidewalks" value="3" id="s3">
                         <label for="s3" class="rating-label">3</label>
-                        <input type="radio" name="snow_removal" value="4" id="s4">
+                        <input type="radio" name="snow_sidewalks" value="4" id="s4">
                         <label for="s4" class="rating-label">4</label>
-                        <input type="radio" name="snow_removal" value="5" id="s5">
+                        <input type="radio" name="snow_sidewalks" value="5" id="s5">
                         <label for="s5" class="rating-label">5</label>
                     </div>
                 </div>
 
-                <!-- 5. Уличное освещение -->
+                <!-- 5. Уборка снега с проезжих частей -->
                 <div class="question-item">
-                    <label class="form-label fw-bold fs-5">5. Уличное освещение во дворе</label>
+                    <label class="form-label fw-bold fs-5">5. Уборка снега с проезжих частей</label>
+                    <div class="rating-group">
+                        <input type="radio" name="snow_road" value="1" id="r1" required>
+                        <label for="r1" class="rating-label">1</label>
+                        <input type="radio" name="snow_road" value="2" id="r2">
+                        <label for="r2" class="rating-label">2</label>
+                        <input type="radio" name="snow_road" value="3" id="r3">
+                        <label for="r3" class="rating-label">3</label>
+                        <input type="radio" name="snow_road" value="4" id="r4">
+                        <label for="r4" class="rating-label">4</label>
+                        <input type="radio" name="snow_road" value="5" id="r5">
+                        <label for="r5" class="rating-label">5</label>
+                    </div>
+                </div>
+
+                <!-- 6. Уличное освещение во дворе -->
+                <div class="question-item">
+                    <label class="form-label fw-bold fs-5">6. Уличное освещение во дворе</label>
                     <div class="rating-group">
                         <input type="radio" name="lighting_outside" value="1" id="lo1" required>
                         <label for="lo1" class="rating-label">1</label>
@@ -356,9 +373,9 @@
                     </div>
                 </div>
 
-                <!-- 6. Вывоз мусора -->
+                <!-- 7. Вывоз мусора -->
                 <div class="question-item">
-                    <label class="form-label fw-bold fs-5">6. Вывоз мусора</label>
+                    <label class="form-label fw-bold fs-5">7. Вывоз мусора</label>
                     <div class="rating-group">
                         <input type="radio" name="garbage" value="1" id="g1" required>
                         <label for="g1" class="rating-label">1</label>
@@ -371,12 +388,6 @@
                         <input type="radio" name="garbage" value="5" id="g5">
                         <label for="g5" class="rating-label">5</label>
                     </div>
-                </div>
-
-                <!-- Комментарий -->
-                <div class="mb-4">
-                    <label class="form-label fw-bold fs-5">7. Ваши пожелания и замечания</label>
-                    <textarea name="comment" class="form-control" rows="4" placeholder="Что нужно улучшить? Напишите подробнее..."></textarea>
                 </div>
 
                 <button type="submit" class="btn btn-primary w-100 py-3 fs-5">📤 Отправить оценку</button>
