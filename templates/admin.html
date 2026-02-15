@@ -348,13 +348,84 @@
                                         📍 {{ r.address or 'Не указан' }}
                                     </span>
                                 </td>
-                                <td><span class="badge bg-{{ 'success' if r.cleaning_inside >= 4 else 'warning' if r.cleaning_inside == 3 else 'danger' }}">{{ r.cleaning_inside }}</span></td>
-                                <td><span class="badge bg-{{ 'success' if r.lighting_inside >= 4 else 'warning' if r.lighting_inside == 3 else 'danger' }}">{{ r.lighting_inside }}</span></td>
-                                <td><span class="badge bg-{{ 'success' if r.elevator >= 4 else 'warning' if r.elevator == 3 else 'danger' }}">{{ r.elevator }}</span></td>
-                                <td><span class="badge bg-{{ 'success' if r.snow_sidewalks >= 4 else 'warning' if r.snow_sidewalks == 3 else 'danger' }}">{{ r.snow_sidewalks }}</span></td>
-                                <td><span class="badge bg-{{ 'success' if r.snow_road >= 4 else 'warning' if r.snow_road == 3 else 'danger' }}">{{ r.snow_road }}</span></td>
-                                <td><span class="badge bg-{{ 'success' if r.lighting_outside >= 4 else 'warning' if r.lighting_outside == 3 else 'danger' }}">{{ r.lighting_outside }}</span></td>
-                                <td><span class="badge bg-{{ 'success' if r.garbage >= 4 else 'warning' if r.garbage == 3 else 'danger' }}">{{ r.garbage }}</span></td>
+                                
+                                <!-- Уборка внутри подъезда -->
+                                <td>
+                                    {% if r.cleaning_inside is not none %}
+                                        <span class="badge bg-{{ 'success' if r.cleaning_inside >= 4 else 'warning' if r.cleaning_inside == 3 else 'danger' }}">
+                                            {{ r.cleaning_inside }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">—</span>
+                                    {% endif %}
+                                </td>
+                                
+                                <!-- Освещение внутри подъезда -->
+                                <td>
+                                    {% if r.lighting_inside is not none %}
+                                        <span class="badge bg-{{ 'success' if r.lighting_inside >= 4 else 'warning' if r.lighting_inside == 3 else 'danger' }}">
+                                            {{ r.lighting_inside }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">—</span>
+                                    {% endif %}
+                                </td>
+                                
+                                <!-- Работа лифта -->
+                                <td>
+                                    {% if r.elevator is not none %}
+                                        <span class="badge bg-{{ 'success' if r.elevator >= 4 else 'warning' if r.elevator == 3 else 'danger' }}">
+                                            {{ r.elevator }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">—</span>
+                                    {% endif %}
+                                </td>
+                                
+                                <!-- Снег тротуары -->
+                                <td>
+                                    {% if r.snow_sidewalks is not none %}
+                                        <span class="badge bg-{{ 'success' if r.snow_sidewalks >= 4 else 'warning' if r.snow_sidewalks == 3 else 'danger' }}">
+                                            {{ r.snow_sidewalks }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">—</span>
+                                    {% endif %}
+                                </td>
+                                
+                                <!-- Снег дороги -->
+                                <td>
+                                    {% if r.snow_road is not none %}
+                                        <span class="badge bg-{{ 'success' if r.snow_road >= 4 else 'warning' if r.snow_road == 3 else 'danger' }}">
+                                            {{ r.snow_road }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">—</span>
+                                    {% endif %}
+                                </td>
+                                
+                                <!-- Уличное освещение -->
+                                <td>
+                                    {% if r.lighting_outside is not none %}
+                                        <span class="badge bg-{{ 'success' if r.lighting_outside >= 4 else 'warning' if r.lighting_outside == 3 else 'danger' }}">
+                                            {{ r.lighting_outside }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">—</span>
+                                    {% endif %}
+                                </td>
+                                
+                                <!-- Вывоз мусора -->
+                                <td>
+                                    {% if r.garbage is not none %}
+                                        <span class="badge bg-{{ 'success' if r.garbage >= 4 else 'warning' if r.garbage == 3 else 'danger' }}">
+                                            {{ r.garbage }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">—</span>
+                                    {% endif %}
+                                </td>
+                                
                                 <td>
                                     {% if r.moderated %}
                                         <span class="badge bg-success">✅ Одобрено</span>
