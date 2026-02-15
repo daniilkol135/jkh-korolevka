@@ -7,14 +7,21 @@ import os
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-this-key-in-production')
 
-# Путь для SQLite на Render
-basedir = os.path.abspath(os.path.dirname(__file__))
-db_path = os.path.join(basedir, 'instance', 'poll.db')
+# ============ ПОДКЛЮЧЕНИЕ К БАЗЕ ============
+# Берем URL базы из переменной окружения (её создадим позже)
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if DATABASE_URL:
+    # Render дает ссылку начинающуюся с postgres://, а Flask-SQLAlchemy требует postgresql://
+    if DATABASE_URL.startswith('postgres://'):
+        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+else:
+    # Если нет DATABASE_URL (например локально), используем SQLite
+    basedir = os.path.abspath(os.path.dirname(__file__))
+    db_path = os.path.join(basedir, 'instance', 'poll.db')
+    os.makedirs(os.path.join(basedir, 'instance'), exist_ok=True)
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + db_path
 
-# Создаем папку instance
-os.makedirs(os.path.join(basedir, 'instance'), exist_ok=True)
-
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + db_path
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -24,7 +31,7 @@ ADDRESSES = [
     "Смоленск, ул. Ударников, д. 36",
     "Смоленск, мкр. Королевка, д. 20",
     "Смоленск, ул. Авиаторов, д. 5Б",
-    "Смоленск, ул. Авиаторов, д. 91"
+    "Смоленск, ул. Авиаторов, д. 9"
 ]
 
 # ============ МОДЕЛЬ ДАННЫХ ============
@@ -33,25 +40,26 @@ class Response(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     
     # Адрес
-    address = db.Column(db.String(200))  # Выбор адреса из списка
+    address = db.Column(db.String(200))
     
     # Вопросы по ЖКХ
-    cleaning_inside = db.Column(db.Integer)  # Уборка внутри подъезда
-    lighting_inside = db.Column(db.Integer)  # Освещение внутри подъезда
-    elevator = db.Column(db.Integer)         # Работа лифта
-    snow_removal = db.Column(db.Integer)     # Уборка снега с тротуаров
-    lighting_outside = db.Column(db.Integer) # Уличное освещение во дворе
-    garbage = db.Column(db.Integer)          # Вывоз мусора
+    cleaning_inside = db.Column(db.Integer)
+    lighting_inside = db.Column(db.Integer)
+    elevator = db.Column(db.Integer)
+    snow_removal = db.Column(db.Integer)
+    lighting_outside = db.Column(db.Integer)
+    garbage = db.Column(db.Integer)
     
     comment = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.now)
 
 # ============ СОЗДАНИЕ ТАБЛИЦ ============
-@app.before_request
-def create_tables():
-    if not hasattr(app, 'tables_created'):
+with app.app_context():
+    try:
         db.create_all()
-        app.tables_created = True
+        print("✅ База данных подключена")
+    except Exception as e:
+        print(f"⚠️ Ошибка при создании БД: {e}")
 
 # ============ ДЕКОРАТОР АДМИНКИ ============
 def admin_required(f):
@@ -86,20 +94,8 @@ def submit():
         return redirect(url_for('thankyou'))
     except Exception as e:
         print(f"Error saving response: {e}")
-        db.create_all()
-        response = Response(
-            address=request.form['address'],
-            cleaning_inside=request.form['cleaning_inside'],
-            lighting_inside=request.form['lighting_inside'],
-            elevator=request.form['elevator'],
-            snow_removal=request.form['snow_removal'],
-            lighting_outside=request.form['lighting_outside'],
-            garbage=request.form['garbage'],
-            comment=request.form.get('comment', '')
-        )
-        db.session.add(response)
-        db.session.commit()
-        return redirect(url_for('thankyou'))
+        db.session.rollback()
+        return "Ошибка при сохранении. Попробуйте позже.", 500
 
 # ============ СТРАНИЦА СПАСИБО ============
 @app.route('/thankyou')
@@ -109,31 +105,6 @@ def thankyou():
 # ============ СТРАНИЦА РЕЗУЛЬТАТОВ ============
 @app.route('/results')
 def results():
-    inspector = db.inspect(db.engine)
-    if not inspector.has_table('response'):
-        db.create_all()
-        stats = {
-            'cleaning_inside': [0,0,0,0,0],
-            'lighting_inside': [0,0,0,0,0],
-            'elevator': [0,0,0,0,0],
-            'snow_removal': [0,0,0,0,0],
-            'lighting_outside': [0,0,0,0,0],
-            'garbage': [0,0,0,0,0],
-            'total': 0
-        }
-        averages = {
-            'cleaning_inside': 0,
-            'lighting_inside': 0,
-            'elevator': 0,
-            'snow_removal': 0,
-            'lighting_outside': 0,
-            'garbage': 0
-        }
-        # Статистика по адресам
-        address_stats = {addr: 0 for addr in ADDRESSES}
-        return render_template('results.html', stats=stats, averages=averages, 
-                             addresses=ADDRESSES, address_stats=address_stats)
-    
     responses = Response.query.all()
     
     stats = {
@@ -157,7 +128,6 @@ def results():
         stats['lighting_outside'][r.lighting_outside-1] += 1
         stats['garbage'][r.garbage-1] += 1
         
-        # Считаем голоса по адресам
         if r.address in address_stats:
             address_stats[r.address] += 1
     
@@ -189,11 +159,6 @@ def login():
 @app.route('/admin')
 @admin_required
 def admin():
-    inspector = db.inspect(db.engine)
-    if not inspector.has_table('response'):
-        db.create_all()
-        return render_template('admin.html', responses=[], addresses=ADDRESSES)
-    
     responses = Response.query.order_by(Response.timestamp.desc()).all()
     return render_template('admin.html', responses=responses, addresses=ADDRESSES)
 
@@ -203,15 +168,5 @@ def logout():
     session.pop('admin_logged_in', None)
     return redirect(url_for('index'))
 
-# ============ ИНИЦИАЛИЗАЦИЯ ============
-with app.app_context():
-    try:
-        db.create_all()
-        print("✅ База данных создана/подключена")
-    except Exception as e:
-        print(f"⚠️ Ошибка при создании БД: {e}")
-
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     app.run(debug=False)
