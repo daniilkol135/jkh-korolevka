@@ -1,22 +1,21 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, Response as FlaskResponse, json
 from flask_sqlalchemy import SQLAlchemy
 from functools import wraps
 from datetime import datetime
 import os
+import csv
+import io
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-this-key-in-production')
 
 # ============ ПОДКЛЮЧЕНИЕ К БАЗЕ ============
-# Берем URL базы из переменной окружения (её создадим позже)
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
-    # Render дает ссылку начинающуюся с postgres://, а Flask-SQLAlchemy требует postgresql://
     if DATABASE_URL.startswith('postgres://'):
         DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 else:
-    # Если нет DATABASE_URL (например локально), используем SQLite
     basedir = os.path.abspath(os.path.dirname(__file__))
     db_path = os.path.join(basedir, 'instance', 'poll.db')
     os.makedirs(os.path.join(basedir, 'instance'), exist_ok=True)
@@ -52,6 +51,11 @@ class Response(db.Model):
     
     comment = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.now)
+    
+    # Статус модерации
+    moderated = db.Column(db.Boolean, default=False)
+    moderated_at = db.Column(db.DateTime, nullable=True)
+    moderated_by = db.Column(db.String(100), nullable=True)
 
 # ============ СОЗДАНИЕ ТАБЛИЦ ============
 with app.app_context():
@@ -102,10 +106,11 @@ def submit():
 def thankyou():
     return render_template('thankyou.html')
 
-# ============ СТРАНИЦА РЕЗУЛЬТАТОВ ============
+# ============ СТРАНИЦА РЕЗУЛЬТАТОВ (ПУБЛИЧНАЯ) ============
 @app.route('/results')
 def results():
-    responses = Response.query.all()
+    # Только ОДОБРЕННЫЕ комментарии показываем на публичной странице
+    responses = Response.query.filter_by(moderated=True).all()
     
     stats = {
         'cleaning_inside': [0,0,0,0,0],
@@ -155,12 +160,164 @@ def login():
             return redirect(url_for('admin'))
     return render_template('login.html')
 
-# ============ АДМИН-ПАНЕЛЬ ============
+# ============ АДМИН-ПАНЕЛЬ (со всеми голосами) ============
 @app.route('/admin')
 @admin_required
 def admin():
+    # Показываем ВСЕ голоса (и одобренные, и нет)
+    filter_status = request.args.get('filter', 'all')
+    
+    if filter_status == 'moderated':
+        responses = Response.query.filter_by(moderated=True).order_by(Response.timestamp.desc()).all()
+    elif filter_status == 'unmoderated':
+        responses = Response.query.filter_by(moderated=False).order_by(Response.timestamp.desc()).all()
+    else:
+        responses = Response.query.order_by(Response.timestamp.desc()).all()
+    
+    # Статистика для модерации
+    total_count = Response.query.count()
+    moderated_count = Response.query.filter_by(moderated=True).count()
+    unmoderated_count = Response.query.filter_by(moderated=False).count()
+    
+    return render_template('admin.html', 
+                         responses=responses, 
+                         addresses=ADDRESSES,
+                         total_count=total_count,
+                         moderated_count=moderated_count,
+                         unmoderated_count=unmoderated_count,
+                         current_filter=filter_status)
+
+# ============ МОДЕРАЦИЯ КОММЕНТАРИЯ ============
+@app.route('/moderate/<int:response_id>/<action>', methods=['POST'])
+@admin_required
+def moderate(response_id, action):
+    response = Response.query.get_or_404(response_id)
+    
+    if action == 'approve':
+        response.moderated = True
+        response.moderated_at = datetime.now()
+        response.moderated_by = session.get('admin_user', 'admin')
+        flash_message = f"Комментарий #{response_id} одобрен"
+    elif action == 'reject':
+        # Можно удалить или просто отметить как неодобренный
+        response.moderated = False
+        flash_message = f"Комментарий #{response_id} отклонен"
+    elif action == 'delete':
+        db.session.delete(response)
+        db.session.commit()
+        return json.jsonify({'success': True, 'message': f'Комментарий #{response_id} удален'})
+    
+    db.session.commit()
+    return json.jsonify({'success': True, 'message': flash_message})
+
+# ============ ЭКСПОРТ В CSV ============
+@app.route('/export/csv')
+@admin_required
+def export_csv():
+    # Получаем все голоса
     responses = Response.query.order_by(Response.timestamp.desc()).all()
-    return render_template('admin.html', responses=responses, addresses=ADDRESSES)
+    
+    # Создаем CSV в памяти
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=';', quoting=csv.QUOTE_MINIMAL)
+    
+    # Заголовки на русском
+    writer.writerow([
+        'ID',
+        'Дата и время',
+        'Адрес',
+        'Уборка в подъезде',
+        'Освещение в подъезде',
+        'Работа лифта',
+        'Уборка снега',
+        'Уличное освещение',
+        'Вывоз мусора',
+        'Комментарий',
+        'Статус модерации',
+        'Дата модерации'
+    ])
+    
+    # Данные
+    for r in responses:
+        writer.writerow([
+            r.id,
+            r.timestamp.strftime('%d.%m.%Y %H:%M') if r.timestamp else '',
+            r.address,
+            r.cleaning_inside,
+            r.lighting_inside,
+            r.elevator,
+            r.snow_removal,
+            r.lighting_outside,
+            r.garbage,
+            r.comment or '',
+            'Одобрено' if r.moderated else 'На модерации',
+            r.moderated_at.strftime('%d.%m.%Y %H:%M') if r.moderated_at else ''
+        ])
+    
+    # Возвращаем файл
+    output.seek(0)
+    return FlaskResponse(
+        output,
+        mimetype='text/csv; charset=utf-8',
+        headers={'Content-Disposition': 'attachment; filename=golosovanie_export.csv'}
+    )
+
+# ============ ЭКСПОРТ В JSON ============
+@app.route('/export/json')
+@admin_required
+def export_json():
+    responses = Response.query.order_by(Response.timestamp.desc()).all()
+    
+    data = []
+    for r in responses:
+        data.append({
+            'id': r.id,
+            'timestamp': r.timestamp.strftime('%d.%m.%Y %H:%M') if r.timestamp else None,
+            'address': r.address,
+            'ratings': {
+                'cleaning_inside': r.cleaning_inside,
+                'lighting_inside': r.lighting_inside,
+                'elevator': r.elevator,
+                'snow_removal': r.snow_removal,
+                'lighting_outside': r.lighting_outside,
+                'garbage': r.garbage
+            },
+            'comment': r.comment,
+            'moderated': r.moderated,
+            'moderated_at': r.moderated_at.strftime('%d.%m.%Y %H:%M') if r.moderated_at else None
+        })
+    
+    return FlaskResponse(
+        json.dumps(data, ensure_ascii=False, indent=2),
+        mimetype='application/json; charset=utf-8',
+        headers={'Content-Disposition': 'attachment; filename=golosovanie_export.json'}
+    )
+
+# ============ ЭКСПОРТ В EXCEL (через CSV) ============
+@app.route('/export/excel')
+@admin_required
+def export_excel():
+    # Просто CSV с расширением .csv - Excel откроет
+    return export_csv()
+
+# ============ СТАТИСТИКА ДЛЯ АДМИНА ============
+@app.route('/admin/stats')
+@admin_required
+def admin_stats():
+    total = Response.query.count()
+    moderated = Response.query.filter_by(moderated=True).count()
+    unmoderated = Response.query.filter_by(moderated=False).count()
+    
+    stats_by_address = {}
+    for address in ADDRESSES:
+        count = Response.query.filter_by(address=address).count()
+        stats_by_address[address] = count
+    
+    return render_template('admin_stats.html',
+                         total=total,
+                         moderated=moderated,
+                         unmoderated=unmoderated,
+                         stats_by_address=stats_by_address)
 
 # ============ ВЫХОД ИЗ АДМИНКИ ============
 @app.route('/logout')
