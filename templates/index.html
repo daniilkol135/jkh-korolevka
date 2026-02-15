@@ -22,6 +22,8 @@
             --border-color: #dee2e6;
             --link-color: #667eea;
             --select-bg: white;
+            --welcome-bg: #e3f2fd;
+            --welcome-border: #90caf9;
         }
 
         /* ======== ТЁМНАЯ ТЕМА ======== */
@@ -40,6 +42,8 @@
             --border-color: #4a4f62;
             --link-color: #a29bfe;
             --select-bg: #2a2f3f;
+            --welcome-bg: #1e3a5f;
+            --welcome-border: #2d4b75;
         }
 
         body { 
@@ -65,6 +69,19 @@
         }
         p, .text-muted {
             color: var(--text-muted) !important;
+        }
+        .welcome-message {
+            background: var(--welcome-bg);
+            border-left: 5px solid var(--welcome-border);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            color: var(--text-color);
+        }
+        .welcome-message p {
+            margin-bottom: 0;
+            font-size: 1.1rem;
+            line-height: 1.6;
         }
         .question-item {
             background: var(--question-bg);
@@ -236,7 +253,11 @@
 
         <div class="card p-5">
             <h1 class="text-center mb-3">🏢 мкр Королевка</h1>
-            <p class="text-center mb-4">Оценка качества услуг ЖКХ</p>
+            
+            <!-- ПРИВЕТСТВЕННЫЙ ТЕКСТ -->
+            <div class="welcome-message">
+                <p>Уважаемые жители микрорайона Королевка! В целях улучшения качества жилищно-коммунальных услуг, предоставляемых УК "Мой Смоленск", просим Вас ответить на несколько вопросов.</p>
+            </div>
             
             <form action="/submit" method="post">
                 <!-- ВЫБОР АДРЕСА -->
@@ -301,7 +322,7 @@
                     </div>
                 </div>
 
-                <!-- 4. Уборка снега с тротуаров и проезжих частей -->
+                <!-- 4. Уборка снега -->
                 <div class="question-item">
                     <label class="form-label fw-bold fs-5">4. Уборка снега с тротуаров и проезжих частей</label>
                     <div class="rating-group">
@@ -318,7 +339,7 @@
                     </div>
                 </div>
 
-                <!-- 5. Уличное освещение во дворе -->
+                <!-- 5. Уличное освещение -->
                 <div class="question-item">
                     <label class="form-label fw-bold fs-5">5. Уличное освещение во дворе</label>
                     <div class="rating-group">
