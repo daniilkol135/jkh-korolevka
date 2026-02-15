@@ -52,18 +52,45 @@ class Response(db.Model):
     comment = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.now)
     
-    # Статус модерации
+    # Статус модерации (НОВЫЕ ПОЛЯ)
     moderated = db.Column(db.Boolean, default=False)
     moderated_at = db.Column(db.DateTime, nullable=True)
     moderated_by = db.Column(db.String(100), nullable=True)
 
-# ============ СОЗДАНИЕ ТАБЛИЦ ============
+# ============ СОЗДАНИЕ/ОБНОВЛЕНИЕ ТАБЛИЦ ============
 with app.app_context():
     try:
-        db.create_all()
-        print("✅ База данных подключена")
+        inspector = db.inspect(db.engine)
+        
+        # Если таблицы нет - создаем
+        if not inspector.has_table('response'):
+            db.create_all()
+            print("✅ База данных создана")
+        else:
+            # Проверяем и добавляем недостающие колонки
+            columns = [col['name'] for col in inspector.get_columns('response')]
+            
+            if 'moderated' not in columns:
+                with db.engine.connect() as conn:
+                    conn.execute(db.text('ALTER TABLE response ADD COLUMN moderated BOOLEAN DEFAULT FALSE'))
+                    conn.commit()
+                print("✅ Добавлена колонка moderated")
+            
+            if 'moderated_at' not in columns:
+                with db.engine.connect() as conn:
+                    conn.execute(db.text('ALTER TABLE response ADD COLUMN moderated_at TIMESTAMP'))
+                    conn.commit()
+                print("✅ Добавлена колонка moderated_at")
+            
+            if 'moderated_by' not in columns:
+                with db.engine.connect() as conn:
+                    conn.execute(db.text('ALTER TABLE response ADD COLUMN moderated_by VARCHAR(100)'))
+                    conn.commit()
+                print("✅ Добавлена колонка moderated_by")
+            
+            print("✅ База данных обновлена")
     except Exception as e:
-        print(f"⚠️ Ошибка при создании БД: {e}")
+        print(f"⚠️ Ошибка при обновлении БД: {e}")
 
 # ============ ДЕКОРАТОР АДМИНКИ ============
 def admin_required(f):
@@ -92,6 +119,7 @@ def submit():
             lighting_outside=request.form['lighting_outside'],
             garbage=request.form['garbage'],
             comment=request.form.get('comment', '')
+            # moderated=False по умолчанию, остальное NULL
         )
         db.session.add(response)
         db.session.commit()
@@ -160,11 +188,10 @@ def login():
             return redirect(url_for('admin'))
     return render_template('login.html')
 
-# ============ АДМИН-ПАНЕЛЬ (со всеми голосами) ============
+# ============ АДМИН-ПАНЕЛЬ ============
 @app.route('/admin')
 @admin_required
 def admin():
-    # Показываем ВСЕ голоса (и одобренные, и нет)
     filter_status = request.args.get('filter', 'all')
     
     if filter_status == 'moderated':
@@ -174,7 +201,6 @@ def admin():
     else:
         responses = Response.query.order_by(Response.timestamp.desc()).all()
     
-    # Статистика для модерации
     total_count = Response.query.count()
     moderated_count = Response.query.filter_by(moderated=True).count()
     unmoderated_count = Response.query.filter_by(moderated=False).count()
@@ -187,7 +213,7 @@ def admin():
                          unmoderated_count=unmoderated_count,
                          current_filter=filter_status)
 
-# ============ МОДЕРАЦИЯ КОММЕНТАРИЯ ============
+# ============ МОДЕРАЦИЯ ============
 @app.route('/moderate/<int:response_id>/<action>', methods=['POST'])
 @admin_required
 def moderate(response_id, action):
@@ -196,48 +222,30 @@ def moderate(response_id, action):
     if action == 'approve':
         response.moderated = True
         response.moderated_at = datetime.now()
-        response.moderated_by = session.get('admin_user', 'admin')
-        flash_message = f"Комментарий #{response_id} одобрен"
-    elif action == 'reject':
-        # Можно удалить или просто отметить как неодобренный
-        response.moderated = False
-        flash_message = f"Комментарий #{response_id} отклонен"
+        response.moderated_by = 'admin'
+        db.session.commit()
+        return json.jsonify({'success': True, 'message': 'Одобрено'})
     elif action == 'delete':
         db.session.delete(response)
         db.session.commit()
-        return json.jsonify({'success': True, 'message': f'Комментарий #{response_id} удален'})
+        return json.jsonify({'success': True, 'message': 'Удалено'})
     
-    db.session.commit()
-    return json.jsonify({'success': True, 'message': flash_message})
+    return json.jsonify({'success': False, 'message': 'Неизвестное действие'})
 
-# ============ ЭКСПОРТ В CSV ============
+# ============ ЭКСПОРТ ============
 @app.route('/export/csv')
 @admin_required
 def export_csv():
-    # Получаем все голоса
     responses = Response.query.order_by(Response.timestamp.desc()).all()
     
-    # Создаем CSV в памяти
     output = io.StringIO()
     writer = csv.writer(output, delimiter=';', quoting=csv.QUOTE_MINIMAL)
     
-    # Заголовки на русском
     writer.writerow([
-        'ID',
-        'Дата и время',
-        'Адрес',
-        'Уборка в подъезде',
-        'Освещение в подъезде',
-        'Работа лифта',
-        'Уборка снега',
-        'Уличное освещение',
-        'Вывоз мусора',
-        'Комментарий',
-        'Статус модерации',
-        'Дата модерации'
+        'ID', 'Дата', 'Адрес', 'Уборка', 'Освещение', 'Лифт', 'Снег',
+        'Улица', 'Мусор', 'Комментарий', 'Статус', 'Дата модерации'
     ])
     
-    # Данные
     for r in responses:
         writer.writerow([
             r.id,
@@ -254,7 +262,6 @@ def export_csv():
             r.moderated_at.strftime('%d.%m.%Y %H:%M') if r.moderated_at else ''
         ])
     
-    # Возвращаем файл
     output.seek(0)
     return FlaskResponse(
         output,
@@ -262,64 +269,11 @@ def export_csv():
         headers={'Content-Disposition': 'attachment; filename=golosovanie_export.csv'}
     )
 
-# ============ ЭКСПОРТ В JSON ============
-@app.route('/export/json')
-@admin_required
-def export_json():
-    responses = Response.query.order_by(Response.timestamp.desc()).all()
-    
-    data = []
-    for r in responses:
-        data.append({
-            'id': r.id,
-            'timestamp': r.timestamp.strftime('%d.%m.%Y %H:%M') if r.timestamp else None,
-            'address': r.address,
-            'ratings': {
-                'cleaning_inside': r.cleaning_inside,
-                'lighting_inside': r.lighting_inside,
-                'elevator': r.elevator,
-                'snow_removal': r.snow_removal,
-                'lighting_outside': r.lighting_outside,
-                'garbage': r.garbage
-            },
-            'comment': r.comment,
-            'moderated': r.moderated,
-            'moderated_at': r.moderated_at.strftime('%d.%m.%Y %H:%M') if r.moderated_at else None
-        })
-    
-    return FlaskResponse(
-        json.dumps(data, ensure_ascii=False, indent=2),
-        mimetype='application/json; charset=utf-8',
-        headers={'Content-Disposition': 'attachment; filename=golosovanie_export.json'}
-    )
-
-# ============ ЭКСПОРТ В EXCEL (через CSV) ============
 @app.route('/export/excel')
 @admin_required
 def export_excel():
-    # Просто CSV с расширением .csv - Excel откроет
     return export_csv()
 
-# ============ СТАТИСТИКА ДЛЯ АДМИНА ============
-@app.route('/admin/stats')
-@admin_required
-def admin_stats():
-    total = Response.query.count()
-    moderated = Response.query.filter_by(moderated=True).count()
-    unmoderated = Response.query.filter_by(moderated=False).count()
-    
-    stats_by_address = {}
-    for address in ADDRESSES:
-        count = Response.query.filter_by(address=address).count()
-        stats_by_address[address] = count
-    
-    return render_template('admin_stats.html',
-                         total=total,
-                         moderated=moderated,
-                         unmoderated=unmoderated,
-                         stats_by_address=stats_by_address)
-
-# ============ ВЫХОД ИЗ АДМИНКИ ============
 @app.route('/logout')
 def logout():
     session.pop('admin_logged_in', None)
