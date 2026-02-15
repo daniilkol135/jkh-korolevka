@@ -81,13 +81,6 @@
             background: var(--table-hover);
             color: var(--text-color);
         }
-        .comment-cell { 
-            max-width: 250px; 
-            white-space: nowrap; 
-            overflow: hidden; 
-            text-overflow: ellipsis; 
-            color: var(--text-muted);
-        }
         .badge {
             font-size: 0.8rem;
             padding: 0.4rem 0.6rem;
@@ -337,10 +330,10 @@
                                 <th>🧹 Уборка</th>
                                 <th>💡 Освещение</th>
                                 <th>🛗 Лифт</th>
-                                <th>❄️ Снег</th>
+                                <th>❄️ Тротуары</th>
+                                <th>❄️ Дороги</th>
                                 <th>🌙 Улица</th>
                                 <th>🗑️ Мусор</th>
-                                <th>💬 Комментарий</th>
                                 <th>✅ Статус</th>
                                 <th>⚙️ Действия</th>
                             </tr>
@@ -358,16 +351,10 @@
                                 <td><span class="badge bg-{{ 'success' if r.cleaning_inside >= 4 else 'warning' if r.cleaning_inside == 3 else 'danger' }}">{{ r.cleaning_inside }}</span></td>
                                 <td><span class="badge bg-{{ 'success' if r.lighting_inside >= 4 else 'warning' if r.lighting_inside == 3 else 'danger' }}">{{ r.lighting_inside }}</span></td>
                                 <td><span class="badge bg-{{ 'success' if r.elevator >= 4 else 'warning' if r.elevator == 3 else 'danger' }}">{{ r.elevator }}</span></td>
-                                <td><span class="badge bg-{{ 'success' if r.snow_removal >= 4 else 'warning' if r.snow_removal == 3 else 'danger' }}">{{ r.snow_removal }}</span></td>
+                                <td><span class="badge bg-{{ 'success' if r.snow_sidewalks >= 4 else 'warning' if r.snow_sidewalks == 3 else 'danger' }}">{{ r.snow_sidewalks }}</span></td>
+                                <td><span class="badge bg-{{ 'success' if r.snow_road >= 4 else 'warning' if r.snow_road == 3 else 'danger' }}">{{ r.snow_road }}</span></td>
                                 <td><span class="badge bg-{{ 'success' if r.lighting_outside >= 4 else 'warning' if r.lighting_outside == 3 else 'danger' }}">{{ r.lighting_outside }}</span></td>
                                 <td><span class="badge bg-{{ 'success' if r.garbage >= 4 else 'warning' if r.garbage == 3 else 'danger' }}">{{ r.garbage }}</span></td>
-                                <td class="comment-cell" title="{{ r.comment }}">
-                                    {% if r.comment %}
-                                        {{ r.comment[:50] }}{% if r.comment|length > 50 %}...{% endif %}
-                                    {% else %}
-                                        <span class="text-muted">—</span>
-                                    {% endif %}
-                                </td>
                                 <td>
                                     {% if r.moderated %}
                                         <span class="badge bg-success">✅ Одобрено</span>
@@ -384,9 +371,6 @@
                                         {% endif %}
                                         <button class="btn btn-danger btn-sm" onclick="moderate({{ r.id }}, 'delete')">
                                             🗑️
-                                        </button>
-                                        <button class="btn btn-info btn-sm" onclick="showComment({{ r.id }}, '{{ r.comment|replace("'", "\\'")|replace("\n", "\\n")|safe }}')">
-                                            👁️
                                         </button>
                                     </div>
                                 </td>
@@ -422,7 +406,7 @@
     <!-- Скрипт для модерации -->
     <script>
         function moderate(id, action) {
-            if (action === 'delete' && !confirm('Удалить этот комментарий?')) {
+            if (action === 'delete' && !confirm('Удалить этот ответ?')) {
                 return;
             }
             
@@ -440,10 +424,6 @@
                     alert('Ошибка: ' + data.message);
                 }
             });
-        }
-
-        function showComment(id, comment) {
-            alert('Комментарий #' + id + ':\n\n' + comment);
         }
 
         // Переключатель тем
