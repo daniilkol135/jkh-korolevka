@@ -41,18 +41,18 @@ class Response(db.Model):
     # Адрес
     address = db.Column(db.String(200))
     
-    # Вопросы по ЖКХ
-    cleaning_inside = db.Column(db.Integer)
-    lighting_inside = db.Column(db.Integer)
-    elevator = db.Column(db.Integer)
-    snow_removal = db.Column(db.Integer)
-    lighting_outside = db.Column(db.Integer)
-    garbage = db.Column(db.Integer)
+    # Вопросы по ЖКХ (7 вопросов)
+    cleaning_inside = db.Column(db.Integer)        # Уборка внутри подъезда
+    lighting_inside = db.Column(db.Integer)        # Освещение внутри подъезда
+    elevator = db.Column(db.Integer)                # Работа лифта
+    snow_sidewalks = db.Column(db.Integer)          # ❄️ Уборка снега с тротуаров (НОВОЕ)
+    snow_road = db.Column(db.Integer)               # ❄️ Уборка снега с проезжих частей (НОВОЕ)
+    lighting_outside = db.Column(db.Integer)        # Уличное освещение во дворе
+    garbage = db.Column(db.Integer)                  # Вывоз мусора
     
-    comment = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.now)
     
-    # Статус модерации (НОВЫЕ ПОЛЯ)
+    # Статус модерации (теперь только для всего ответа)
     moderated = db.Column(db.Boolean, default=False)
     moderated_at = db.Column(db.DateTime, nullable=True)
     moderated_by = db.Column(db.String(100), nullable=True)
@@ -62,13 +62,31 @@ with app.app_context():
     try:
         inspector = db.inspect(db.engine)
         
-        # Если таблицы нет - создаем
         if not inspector.has_table('response'):
             db.create_all()
             print("✅ База данных создана")
         else:
-            # Проверяем и добавляем недостающие колонки
             columns = [col['name'] for col in inspector.get_columns('response')]
+            
+            # Проверяем и добавляем новые колонки для снега
+            if 'snow_sidewalks' not in columns:
+                with db.engine.connect() as conn:
+                    conn.execute(db.text('ALTER TABLE response ADD COLUMN snow_sidewalks INTEGER'))
+                    conn.commit()
+                print("✅ Добавлена колонка snow_sidewalks")
+            
+            if 'snow_road' not in columns:
+                with db.engine.connect() as conn:
+                    conn.execute(db.text('ALTER TABLE response ADD COLUMN snow_road INTEGER'))
+                    conn.commit()
+                print("✅ Добавлена колонка snow_road")
+            
+            # Удаляем колонку comment если она есть
+            if 'comment' in columns:
+                with db.engine.connect() as conn:
+                    conn.execute(db.text('ALTER TABLE response DROP COLUMN comment'))
+                    conn.commit()
+                print("✅ Удалена колонка comment")
             
             if 'moderated' not in columns:
                 with db.engine.connect() as conn:
@@ -115,11 +133,10 @@ def submit():
             cleaning_inside=request.form['cleaning_inside'],
             lighting_inside=request.form['lighting_inside'],
             elevator=request.form['elevator'],
-            snow_removal=request.form['snow_removal'],
+            snow_sidewalks=request.form['snow_sidewalks'],
+            snow_road=request.form['snow_road'],
             lighting_outside=request.form['lighting_outside'],
-            garbage=request.form['garbage'],
-            comment=request.form.get('comment', '')
-            # moderated=False по умолчанию, остальное NULL
+            garbage=request.form['garbage']
         )
         db.session.add(response)
         db.session.commit()
@@ -137,14 +154,15 @@ def thankyou():
 # ============ СТРАНИЦА РЕЗУЛЬТАТОВ (ПУБЛИЧНАЯ) ============
 @app.route('/results')
 def results():
-    # Только ОДОБРЕННЫЕ комментарии показываем на публичной странице
+    # Только ОДОБРЕННЫЕ ответы
     responses = Response.query.filter_by(moderated=True).all()
     
     stats = {
         'cleaning_inside': [0,0,0,0,0],
         'lighting_inside': [0,0,0,0,0],
         'elevator': [0,0,0,0,0],
-        'snow_removal': [0,0,0,0,0],
+        'snow_sidewalks': [0,0,0,0,0],
+        'snow_road': [0,0,0,0,0],
         'lighting_outside': [0,0,0,0,0],
         'garbage': [0,0,0,0,0],
         'total': len(responses)
@@ -157,7 +175,8 @@ def results():
         stats['cleaning_inside'][r.cleaning_inside-1] += 1
         stats['lighting_inside'][r.lighting_inside-1] += 1
         stats['elevator'][r.elevator-1] += 1
-        stats['snow_removal'][r.snow_removal-1] += 1
+        stats['snow_sidewalks'][r.snow_sidewalks-1] += 1
+        stats['snow_road'][r.snow_road-1] += 1
         stats['lighting_outside'][r.lighting_outside-1] += 1
         stats['garbage'][r.garbage-1] += 1
         
@@ -166,7 +185,7 @@ def results():
     
     averages = {}
     categories = ['cleaning_inside', 'lighting_inside', 'elevator', 
-                  'snow_removal', 'lighting_outside', 'garbage']
+                  'snow_sidewalks', 'snow_road', 'lighting_outside', 'garbage']
     
     for key in categories:
         if stats['total'] > 0:
@@ -242,8 +261,11 @@ def export_csv():
     writer = csv.writer(output, delimiter=';', quoting=csv.QUOTE_MINIMAL)
     
     writer.writerow([
-        'ID', 'Дата', 'Адрес', 'Уборка', 'Освещение', 'Лифт', 'Снег',
-        'Улица', 'Мусор', 'Комментарий', 'Статус', 'Дата модерации'
+        'ID', 'Дата', 'Адрес', 
+        'Уборка в подъезде', 'Освещение в подъезде', 'Лифт',
+        '❄️ Снег (тротуары)', '❄️ Снег (дороги)',
+        'Уличное освещение', 'Вывоз мусора',
+        'Статус', 'Дата модерации'
     ])
     
     for r in responses:
@@ -254,10 +276,10 @@ def export_csv():
             r.cleaning_inside,
             r.lighting_inside,
             r.elevator,
-            r.snow_removal,
+            r.snow_sidewalks,
+            r.snow_road,
             r.lighting_outside,
             r.garbage,
-            r.comment or '',
             'Одобрено' if r.moderated else 'На модерации',
             r.moderated_at.strftime('%d.%m.%Y %H:%M') if r.moderated_at else ''
         ])
